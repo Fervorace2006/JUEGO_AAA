@@ -104,3 +104,6 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Configuración local de OpenXR
+Assets/XR/Settings/OpenXR Package Settings.asset
