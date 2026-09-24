@@ -2,11 +2,11 @@
 
 ## Controles y equipo
 
-Las tres armas aparecen automaticamente al entrar en Play, delante del jugador activo y un poco por debajo de la vista, con etiquetas visibles. Mira ligeramente hacia abajo para encontrarlas. Se agarran con **Grip** (el agarre lateral de los controles). Después de soltarlas regresan a su soporte tras 0,75 segundos.
+Las tres armas son objetos guardados en `ForestScene` sobre la mesa `MESA`: el arco atras, el hacha y el revolver delante. Acercate a la mesa y agarra un arma con **Grip** (el agarre lateral del control). Al soltarla cae sobre la mesa o el suelo; ya no reaparece junto a la camara.
 
-- **Arco, delante a la izquierda:** agarra el cuerpo con una mano. Acerca la otra al centro de la cuerda, mantén Grip y tira hacia atrás. Suelta Grip de esa segunda mano para disparar. La flecha se coloca automáticamente; no hay límite de flechas. Soltar el cuerpo o apartar excesivamente la mano cancela el disparo.
-- **Hacha, delante en el centro:** agarra el mango y golpea con la cabeza. Necesita velocidad de movimiento; tocar o mantener el hacha sobre el enemigo no produce daño continuo. No se desgasta.
-- **Revólver, delante a la derecha:** agarra la empuñadura y pulsa el gatillo para disparar. Un disparo por pulsación, sin recarga ni límite de munición.
+- **Arco:** agarra el cuerpo con una mano. Acerca la otra al centro de la cuerda, mantén Grip y tira hacia atrás. Suelta Grip de esa segunda mano para disparar. La flecha se coloca automáticamente; no hay límite de flechas. Soltar el cuerpo o apartar excesivamente la mano cancela el disparo.
+- **Hacha:** agarra el mango y golpea con la cabeza. Necesita velocidad de movimiento; tocar o mantener el hacha sobre el enemigo no produce daño continuo. No se desgasta.
+- **Revólver:** agarra la empuñadura y pulsa el gatillo para disparar. La bala sale del punto `Muzzle` en la punta del cañon. Un disparo por pulsación, sin recarga ni límite de munición.
 
 | Arma | Daño | Nota |
 |---|---:|---|
@@ -14,7 +14,7 @@ Las tres armas aparecen automaticamente al entrar en Play, delante del jugador a
 | Arco | Hasta 55 | Daño y velocidad aumentan con el estiramiento, máximo 55 cm. |
 | Hacha | 25 | Requiere un golpe de al menos 1,2 m/s y tiene una breve espera entre impactos. |
 
-Los ajustes están en `Assets/SO_/Weapons`. Los cinco prefabs están en `Assets/02_Prefabs/Weapons`: VRBow, VRAxe, VRRevolver, Arrow y Bullet. Los modelos originales permanecen en TripoModels. La cuerda es un LineRenderer de Unity con tres puntos y un agarre independiente. El cuerpo del arco permanece rígido porque el modelo no tiene huesos para doblar las palas.
+Los ajustes están en `Assets/SO_/Weapons`. Los cinco prefabs están en `Assets/02_Prefabs/Weapons`: VRBow, VRAxe, VRRevolver, Arrow y Bullet. Los modelos originales permanecen en TripoModels. La cuerda es un LineRenderer de Unity con tres puntos y un agarre independiente. El cuerpo del arco permanece rígido porque el modelo no tiene huesos para doblar las palas. Se revisó el ejemplo `VR-Archery-in-Unity-2022-main` que dejaste en la raiz del proyecto; el arco del juego conserva su implementacion compatible con el XR Interaction Toolkit actual y toma la distancia de estiramiento al soltar la cuerda.
 
 Los proyectiles comprueban todo el trayecto entre fotogramas para evitar atravesar enemigos o paredes finas a alta velocidad. No dañan al propietario. Las flechas quedan clavadas temporalmente y los proyectiles se eliminan automáticamente.
 
@@ -57,6 +57,6 @@ Los scripts se compilan y la escena se abre en Unity 6000.5.6f1 en una copia tem
 
 Las pruebas reproducibles están en `Assets/01_Scripts/Forest/Editor`. Las entradas `ForestCombatValidation.RunBatch` y `ForestGameplayValidation.RunBatch` son exclusivamente para un proyecto desechable: entran en Play y cierran ese editor al terminar. Cubren el combate, la cuerda, el daño, obstáculos, visión, estados, pendientes y reaparición.
 
-Tambien se comprobo en Play que aparecen las tres armas delante del jugador, se muestran los avisos de vida, F8 recupera al jugador muerto y el duende reanuda sus ataques. Se revisaron capturas de los rotulos y de la linterna ampliada.
+Se muestran los avisos de vida, F8 recupera al jugador muerto y el duende reanuda sus ataques. La linterna ampliada fue revisada visualmente. Las armas ahora estan colocadas en la escena sobre MESA.
 
 Queda pendiente la comprobación ergonómica con tu visor y controles físicos: altura de los soportes, comodidad del agarre y ubicación de los anclajes se pueden ajustar en los componentes/prefabs sin regenerar los modelos.

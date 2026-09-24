@@ -16,7 +16,7 @@ namespace ForestVR
             if (grip == null || !grip.CanUse || Time.time < readyAt || projectilePrefab == null || muzzle == null) return false;
             readyAt = Time.time + grip.settings.cooldown;
             var shot = Instantiate(projectilePrefab, muzzle.position, muzzle.rotation);
-            shot.Launch(grip.settings, grip.Owner, transform, muzzle.forward, 1, grip.Grab.attachTransform.position);
+            shot.Launch(grip.settings, grip.Owner, transform, muzzle.forward, 1, muzzle.position);
             return true;
         }
         void OnDestroy() { if (grip != null && grip.Grab != null) grip.Grab.activated.RemoveListener(Fire); }

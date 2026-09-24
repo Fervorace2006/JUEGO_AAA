@@ -34,7 +34,11 @@ namespace ForestVR
             var owner = args.interactorObject.transform.GetComponentInParent<Health>();
             if (owner != null) Configure(owner, home);
         }
-        void OnRelease(SelectExitEventArgs args) => returnAt = Time.time + 0.75f;
+        void OnRelease(SelectExitEventArgs args)
+        {
+            if (home != null) returnAt = Time.time + 0.75f;
+            else { body.isKinematic = false; body.useGravity = true; }
+        }
         void LateUpdate()
         {
             if (IsHeld || home == null || Time.time < returnAt) return;

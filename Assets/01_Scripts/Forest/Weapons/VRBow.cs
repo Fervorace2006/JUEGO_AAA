@@ -41,10 +41,9 @@ namespace ForestVR
                 if (!grip.CanUse) { CancelDraw(); return; }
                 // Use the controller itself: a near/far attach point can stay on the selected object.
                 Vector3 handPosition = drawingHand.transform.position;
-                float pull = Vector3.Dot(restingNock.position - handPosition, transform.forward);
-                DrawDistance = Mathf.Clamp(pull, 0, grip.settings.maximumDraw);
+                DrawDistance = PullDistance(handPosition);
                 nockPosition -= transform.forward * DrawDistance;
-                if (Vector3.Distance(handPosition, nockPosition) > 0.45f) { CancelDraw(); return; }
+                if (Vector3.Distance(handPosition, nockPosition) > 0.8f) { CancelDraw(); return; }
             }
             else DrawDistance = 0;
             stringGrip.transform.position = nockPosition;
@@ -53,6 +52,12 @@ namespace ForestVR
         }
         void Release(SelectExitEventArgs args)
         {
+            if (drawingHand != null && grip != null)
+            {
+                // Selection can end before LateUpdate in the same frame as the hand moves.
+                DrawDistance = PullDistance(drawingHand.transform.position);
+                nockPosition = restingNock.position - transform.forward * DrawDistance;
+            }
             if (!cancelRelease && !args.isCanceled && grip.CanUse && DrawDistance >= grip.settings.minimumDraw && Time.time >= readyAt)
             {
                 readyAt = Time.time + grip.settings.cooldown;
@@ -61,6 +66,11 @@ namespace ForestVR
                     Mathf.Clamp01(DrawDistance / grip.settings.maximumDraw), nockPosition);
             }
             ClearDraw();
+        }
+        float PullDistance(Vector3 handPosition)
+        {
+            float pull = Vector3.Dot(restingNock.position - handPosition, transform.forward);
+            return Mathf.Clamp(pull, 0, grip.settings.maximumDraw);
         }
         void BowReleased(SelectExitEventArgs args) => CancelDraw();
         void CancelDraw()

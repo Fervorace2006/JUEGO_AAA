@@ -119,8 +119,9 @@ namespace JuegoAAA.VR
             triggerValue = Mathf.Lerp(triggerValue, Mathf.Clamp01(trigger.ReadValue<float>()), step);
             foreach (var joint in joints)
             {
-                float curl = joint.index ? triggerValue : gripValue;
-                joint.bone.localRotation = joint.rest * Quaternion.AngleAxis(Mathf.Lerp(3f, joint.angle, curl), joint.axis);
+                float curl = joint.index ? Mathf.Max(triggerValue, gripValue * 0.65f) : gripValue;
+                float openAngle = joint.index ? -18f : 0f;
+                joint.bone.localRotation = joint.rest * Quaternion.AngleAxis(Mathf.Lerp(openAngle, joint.angle, curl), joint.axis);
             }
         }
 
