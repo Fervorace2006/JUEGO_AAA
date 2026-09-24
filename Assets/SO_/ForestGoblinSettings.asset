@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: ForestGoblinSettings
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.GoblinSettings
   health: 100
-  damage: 20
+  damage: 10
   speed: 1.6
-  detectionRadius: 15
+  detectionRadius: 10
   wakeRadius: 8
   visionAngle: 110
   memorySeconds: 4

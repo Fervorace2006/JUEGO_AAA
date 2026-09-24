@@ -3860,7 +3860,7 @@ MonoBehaviour:
   useControllerHands: 1
   groundLayers:
     serializedVersion: 2
-    m_Bits: 4294967035
+    m_Bits: 51
   probeDepth: 20
   groundedTolerance: 0.12
 --- !u!114 &900000102
@@ -4318,7 +4318,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8806329115733545878, guid: 77e7c27b2c5525e4aa8cc9f99d654486, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 1.01
       objectReference: {fileID: 0}
     - target: {fileID: 8806329115733545878, guid: 77e7c27b2c5525e4aa8cc9f99d654486, type: 3}
       propertyPath: m_LocalPosition.z

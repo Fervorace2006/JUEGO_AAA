@@ -110,3 +110,4 @@ Assets/XR/Settings/OpenXR Package Settings.asset
 # Configuracion local del editor y OpenXR (conservar copias locales)
 /Assets/XR/Settings/OpenXR Package Settings.asset.meta
 /ProjectSettings/EditorBuildSettings.asset
+/VR-Archery-in-Unity-2022-main/
