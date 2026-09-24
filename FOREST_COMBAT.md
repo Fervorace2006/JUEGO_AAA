@@ -6,13 +6,17 @@ Las tres armas son objetos guardados en `ForestScene` sobre la mesa `MESA`: el a
 
 - **Arco:** agarra el cuerpo con una mano. Acerca la otra al centro de la cuerda, mantén Grip y tira hacia atrás. Suelta Grip de esa segunda mano para disparar. La flecha se coloca automáticamente; no hay límite de flechas. Soltar el cuerpo o apartar excesivamente la mano cancela el disparo.
 - **Hacha:** agarra el mango y golpea con la cabeza. Necesita velocidad de movimiento; tocar o mantener el hacha sobre el enemigo no produce daño continuo. No se desgasta.
-- **Revólver:** agarra la empuñadura y pulsa el gatillo para disparar. La bala sale del punto `Muzzle` en la punta del cañon. Un disparo por pulsación, sin recarga ni límite de munición.
+- **Revólver:** agarra la empuñadura y pulsa el gatillo para disparar. La bala (`Bullet`, modelo `TripoModels/bala`) se instancia en el punto `Muzzle` en la punta del cañon y vuela a 40 m/s para que se vea. Deja detrás una estela luminosa tipo estrella fugaz (`shootingStarTrail` en `WeaponProjectile`) que se desvanece en 0,3 s en el punto donde terminó el disparo. Un disparo por pulsación, sin recarga ni límite de munición. En el editor tambien dispara con **F** mientras lo sostienes.
+
+El agarre de armas es fijo: una pulsacion de Grip toma el arma y queda en la mano al soltar el boton; la siguiente pulsacion de Grip la suelta. Asi se puede disparar sin mantener Grip. El tamaño del arma no cambia al sostenerla (`trackScale` desactivado; antes el joystick la escalaba).
+
+Las armas se agarran siempre hacia la mano, aunque se tomen con el rayo a distancia (`farAttachMode = Near`, forzado en `WeaponGrip`). Mientras sostienes un arma, `HandGripPose` cierra los dedos de esa mano alrededor del mango (con el revólver, el índice queda en el gatillo). En el XR Interaction Simulator, cuyas manos capturadas señalan con el índice, la mano libre se muestra relajada; con seguimiento de manos real se respetan tus dedos.
 
 | Arma | Daño | Nota |
 |---|---:|---|
 | Revólver | 100 | Un impacto mata al duende con 100 de vida. |
 | Arco | Hasta 55 | Daño y velocidad aumentan con el estiramiento, máximo 55 cm. |
-| Hacha | 25 | Requiere un golpe de al menos 1,2 m/s y tiene una breve espera entre impactos. |
+| Hacha | 12,5 a 50 | Requiere un golpe de al menos 1,2 m/s; 25 a 3 m/s y el doble a 6 m/s. Breve espera entre impactos. |
 
 Los ajustes están en `Assets/SO_/Weapons`. Los cinco prefabs están en `Assets/02_Prefabs/Weapons`: VRBow, VRAxe, VRRevolver, Arrow y Bullet. Los modelos originales permanecen en TripoModels. La cuerda es un LineRenderer de Unity con tres puntos y un agarre independiente. El cuerpo del arco permanece rígido porque el modelo no tiene huesos para doblar las palas. Se revisó el ejemplo `VR-Archery-in-Unity-2022-main` que dejaste en la raiz del proyecto; el arco del juego conserva su implementacion compatible con el XR Interaction Toolkit actual y toma la distancia de estiramiento al soltar la cuerda.
 
@@ -22,7 +26,7 @@ En el XR Interaction Simulator, selecciona el mando con Tab y usa G para Grip y 
 
 ## Vida, muerte y recuperacion
 
-El indicador muestra la vida restante. Cuando llega a cero, el duende deja de atacar y las armas dejan de hacer dano: no es un bloqueo de la IA. Ahora aparece el aviso **Sin vida**. Pulsa **A o X** en los controles para recuperar la vida y seguir la prueba; en el editor/simulador tambien funciona **F8**. Esta accion solo funciona estando muerto y no reinicia la escena ni revive al duende.
+La vida del jugador es una barra verde en la esquina inferior izquierda de la vista (`HudHealthBar`, hija de la camara y dibujada encima de la escena) que se acorta al recibir dano. Cuando llega a cero, el duende deja de atacar y las armas dejan de hacer dano: no es un bloqueo de la IA. Ahora aparece el aviso **Sin vida**. Pulsa **A o X** en los controles para recuperar la vida y seguir la prueba; en el editor/simulador tambien funciona **F8**. Esta accion solo funciona estando muerto y no reinicia la escena ni revive al duende.
 
 ## Jugador utilizado
 

@@ -34,7 +34,9 @@ namespace ForestVR
                         && (!nextHits.TryGetValue(health, out float until) || Time.time >= until))
                     {
                         nextHits[health] = Time.time + grip.settings.cooldown;
-                        health.TakeHit(grip.settings.damage, grip.SourcePosition);
+                        // Stronger swings hit harder: half damage at the minimum speed, double at 6 m/s.
+                        float force = Mathf.Clamp(speed / 3f, 0.5f, 2f);
+                        health.TakeHit(grip.settings.damage * force, grip.SourcePosition);
                     }
                     break; // Walls block the blade sweep before an enemy behind them.
                 }

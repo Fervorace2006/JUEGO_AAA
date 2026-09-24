@@ -2887,13 +2887,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 642157423}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.23, y: 2, z: -9.28}
+  m_LocalRotation: {x: 0, y: 0.7080318, z: 0, w: 0.7061806}
+  m_LocalPosition: {x: 3.62, y: 2, z: -9.28}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 90.15, z: 0}
 --- !u!114 &642157425
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4561,9 +4561,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 373c490b35731d046bf900c2039e0668, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.PlayerWeaponLoadout
-  bowPrefab: {fileID: 1529017715624554246, guid: 22598222d1f843b43a7fadec6c0a3edd, type: 3}
-  axePrefab: {fileID: 7383408205767540105, guid: de96095559f7fdf4b9bd3cb7097f8a9f, type: 3}
-  revolverPrefab: {fileID: 7698687890612522553, guid: 4a0fa91043c72b244a159a06277fd9a0, type: 3}
 --- !u!114 &931425375
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9206,7 +9203,7 @@ Transform:
   m_GameObject: {fileID: 880000000000011}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -8.68}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -9310,9 +9307,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 373c490b35731d046bf900c2039e0668, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.PlayerWeaponLoadout
-  bowPrefab: {fileID: 1529017715624554246, guid: 22598222d1f843b43a7fadec6c0a3edd, type: 3}
-  axePrefab: {fileID: 7383408205767540105, guid: de96095559f7fdf4b9bd3cb7097f8a9f, type: 3}
-  revolverPrefab: {fileID: 7698687890612522553, guid: 4a0fa91043c72b244a159a06277fd9a0, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
