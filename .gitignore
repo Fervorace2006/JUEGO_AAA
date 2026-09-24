@@ -107,3 +107,6 @@ InitTestScene*.unity*
 
 # Configuración local de OpenXR
 Assets/XR/Settings/OpenXR Package Settings.asset
+# Configuracion local del editor y OpenXR (conservar copias locales)
+/Assets/XR/Settings/OpenXR Package Settings.asset.meta
+/ProjectSettings/EditorBuildSettings.asset

@@ -10,6 +10,7 @@ namespace JuegoAAA.VR
     public sealed class VRGroundProbe : MonoBehaviour
     {
         [SerializeField] bool configurePlayer;
+        [SerializeField] ForestVR.VRLocomotionSettings locomotionSettings;
         [SerializeField] Transform environmentRoot;
         [SerializeField] Material handMaterial;
         [SerializeField] GameObject leftHandModel;
@@ -103,14 +104,23 @@ namespace JuegoAAA.VR
         {
             origin = GetComponent<XROrigin>();
             body = GetComponent<CharacterController>();
+            int weaponLayer = LayerMask.NameToLayer("Weapons");
+            if (weaponLayer >= 0)
+            {
+                groundLayers &= ~(1 << weaponLayer);
+                foreach (var gravity in GetComponentsInChildren<GravityProvider>(true))
+                    gravity.sphereCastLayerMask &= ~(1 << weaponLayer);
+            }
+            if (locomotionSettings != null) ApplyLocomotionSettings();
             if (configurePlayer)
             {
                 origin.RequestedTrackingOriginMode = XROrigin.TrackingOriginMode.Floor;
                 origin.CameraYOffset = 1.65f;
                 body.radius = 0.2f;
-                body.stepOffset = 0.25f;
-                body.skinWidth = 0.02f;
-                body.slopeLimit = 45f;
+                body.stepOffset = locomotionSettings != null ? locomotionSettings.stepHeight : 0.4f;
+                body.skinWidth = locomotionSettings != null ? locomotionSettings.skinWidth : 0.04f;
+                body.slopeLimit = locomotionSettings != null ? locomotionSettings.slopeLimit : 60f;
+                body.minMoveDistance = 0;
                 foreach (var gravity in GetComponentsInChildren<GravityProvider>(true))
                 {
                     gravity.useGravity = true;
@@ -119,6 +129,14 @@ namespace JuegoAAA.VR
                     gravity.sphereCastLayerMask = groundLayers;
                 }
             }
+        }
+
+        void ApplyLocomotionSettings()
+        {
+            body.slopeLimit = locomotionSettings.slopeLimit;
+            body.stepOffset = Mathf.Min(locomotionSettings.stepHeight, body.height - 0.01f);
+            body.skinWidth = locomotionSettings.skinWidth;
+            body.minMoveDistance = 0;
         }
 
         void LateUpdate()
@@ -145,8 +163,10 @@ namespace JuegoAAA.VR
                     out var floorHit, floor.bounds.size.y + 4f);
                 // Keep locomotion inside the playable ground and recover if a teleport or
                 // tracking change places the player below the terrain.
-                if (!overFloor || feet.y < floorHit.point.y - 0.15f
-                    || transform.position.y < safePosition.y - 3f)
+                // A small ascent can put the rig origin just below the sampled slope.
+                // Recover only after genuine penetration, not at every uneven triangle.
+                float recoveryDepth = locomotionSettings != null ? locomotionSettings.recoveryDepth : 0.75f;
+                if (!overFloor || feet.y < floorHit.point.y - recoveryDepth)
                 {
                     PlaceAt(safePosition);
                 }

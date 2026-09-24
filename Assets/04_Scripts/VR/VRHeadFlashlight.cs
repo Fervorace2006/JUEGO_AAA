@@ -9,9 +9,9 @@ namespace JuegoAAA.VR
     [RequireComponent(typeof(XROrigin))]
     public sealed class VRHeadFlashlight : MonoBehaviour
     {
-        [SerializeField, Min(0f)] float intensity = 100f;
-        [SerializeField, Min(1f)] float range = 28f;
-        [SerializeField, Range(1f, 179f)] float coneAngle = 55f;
+        [SerializeField, Min(0f)] float intensity = 8f;
+        [SerializeField, Min(1f)] float range = 40f;
+        [SerializeField, Range(1f, 179f)] float coneAngle = 110f;
         [SerializeField] Color lightColor = new Color(1f, 0.94f, 0.82f);
         [SerializeField] Vector3 headOffset = new Vector3(0f, 0.08f, 0.06f);
         Light flashlight;
