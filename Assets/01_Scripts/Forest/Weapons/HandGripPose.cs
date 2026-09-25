@@ -8,14 +8,13 @@ namespace ForestVR
 {
     // Bends the XR Hands skeleton right after XRHandSkeletonDriver writes the tracked joints:
     // closed around a held weapon with that weapon's grip (revolver, axe, bow, string, arrow),
-    // and relaxed in the XR Interaction Simulator, whose captured hands point with the index.
+    // and open with every finger extended in the XR Interaction Simulator, whose captured hands point with the index.
     // With real hand tracking and nothing held, the tracked fingers are left untouched.
     [RequireComponent(typeof(XRHandSkeletonDriver))]
     public sealed class HandGripPose : MonoBehaviour
     {
         static readonly XRHandFingerID[] Fingers = { XRHandFingerID.Thumb, XRHandFingerID.Index, XRHandFingerID.Middle, XRHandFingerID.Ring, XRHandFingerID.Little };
-        // Flexion in degrees: thumb proximal, thumb distal, then finger proximal, intermediate, distal.
-        static readonly float[] Relaxed = { 8, 8, 12, 18, 10 };
+        // Fist flexion in degrees (0 = straight finger): thumb proximal, thumb distal, then finger proximal, intermediate, distal.
         static readonly float[] Fist = { 30, 35, 70, 90, 55 };
 
         [SerializeField, Min(1)] float blendSpeed = 12;
@@ -25,6 +24,7 @@ namespace ForestVR
         readonly Transform[] joints = new Transform[XRHandJointID.EndMarker.ToIndex()];
         readonly float[] angles = new float[XRHandJointID.EndMarker.ToIndex()];
         readonly float[] targets = new float[XRHandJointID.EndMarker.ToIndex()];
+        readonly bool[] posed = new bool[XRHandJointID.EndMarker.ToIndex()];
         float weight;
 
         InteractorHandedness Side => events != null && events.handedness == Handedness.Left ? InteractorHandedness.Left : InteractorHandedness.Right;
@@ -89,14 +89,14 @@ namespace ForestVR
             // Skip the metacarpal (the thumb's metacarpal keeps its tracked opposition) and the tip.
             var first = finger == XRHandFingerID.Thumb ? XRHandJointID.ThumbProximal : finger.GetFrontJointID() + 1;
             int count = finger == XRHandFingerID.Thumb ? 2 : 3;
-            for (int i = 0; i < count; i++) targets[(first + i).ToIndex()] = Mathf.Lerp(Relaxed[start + i], Fist[start + i], curl);
+            for (int i = 0; i < count; i++) { int joint = (first + i).ToIndex(); targets[joint] = Fist[start + i] * curl; posed[joint] = true; }
         }
         void OnJointsUpdated(XRHandJointsUpdatedEventArgs args)
         {
             if (weight < 0.001f) return;
             for (int i = 0; i < joints.Length; i++)
             {
-                if (joints[i] == null || targets[i] == 0 && angles[i] == 0) continue;
+                if (joints[i] == null || !posed[i]) continue;
                 // Joint frames have +Z toward the fingertip and +Y on the back of the hand: +X flexes toward the palm.
                 joints[i].localRotation = Quaternion.Slerp(joints[i].localRotation, Quaternion.Euler(angles[i], 0, 0), weight);
             }

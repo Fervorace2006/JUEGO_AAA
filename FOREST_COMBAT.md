@@ -6,11 +6,11 @@ Las tres armas son objetos guardados en `ForestScene` sobre la mesa `MESA`: el a
 
 - **Arco:** agarra el cuerpo con una mano. Acerca la otra al centro de la cuerda, mantén Grip y tira hacia atrás. Suelta Grip de esa segunda mano para disparar. La flecha se coloca automáticamente; no hay límite de flechas. Soltar el cuerpo o apartar excesivamente la mano cancela el disparo.
 - **Hacha:** agarra el mango y golpea con la cabeza. Necesita velocidad de movimiento; tocar o mantener el hacha sobre el enemigo no produce daño continuo. No se desgasta.
-- **Revólver:** agarra la empuñadura y pulsa el gatillo para disparar. La bala (`Bullet`, modelo `TripoModels/bala`) se instancia en el punto `Muzzle` en la punta del cañon y vuela a 40 m/s para que se vea. Deja detrás una estela luminosa tipo estrella fugaz (`shootingStarTrail` en `WeaponProjectile`) que se desvanece en 0,3 s en el punto donde terminó el disparo. Un disparo por pulsación, sin recarga ni límite de munición. En el editor tambien dispara con **F** mientras lo sostienes.
+- **Revólver:** agarra la empuñadura y pulsa el gatillo para disparar. La bala (`Bullet`, modelo `TripoModels/bala`) se instancia en el punto `Muzzle` en la punta del cañon y vuela a 40 m/s para que se vea. La bala es 2,5 veces más grande que antes (escala 0,1 del modelo). Deja detrás dos estelas (`shootingStarTrail` en `WeaponProjectile`): una estrella fugaz ancha y brillante (9 cm, blanca a naranja, 0,6 s) y una línea trazadora fina que sigue a la bala desde el cañón y dura 2,5 s, para ver hacia dónde fue el disparo. Al impactar, ambas se quedan en el sitio y se desvanecen. Un disparo por pulsación, sin recarga ni límite de munición. En el editor tambien dispara con **F** mientras lo sostienes.
 
 El agarre de armas es fijo: una pulsacion de Grip toma el arma y queda en la mano al soltar el boton; la siguiente pulsacion de Grip la suelta. Asi se puede disparar sin mantener Grip. El tamaño del arma no cambia al sostenerla (`trackScale` desactivado; antes el joystick la escalaba).
 
-Las armas se agarran siempre hacia la mano, aunque se tomen con el rayo a distancia (`farAttachMode = Near`, forzado en `WeaponGrip`). Cada arma tiene su propio agarre (`WeaponHandPoses`): con mandos, `VRControllerHand` coloca la mano sobre la empuñadura del arma y cierra los dedos con la pose de esa arma; con seguimiento de manos, `HandGripPose` aplica la misma pose a los dedos. Revólver: agarre de pistola con el índice en el gatillo, que se dobla al apretarlo. Hacha: puño cerrado en el mango. Arco: solo se puede agarrar con la **mano izquierda**; mientras lo sostienes, la **mano derecha** lleva una flecha pinzada entre pulgar e índice, y al tomar la cuerda la mano se engancha en ella y la flecha pasa a la cuerda. Tras disparar, la siguiente flecha aparece en la mano al terminar la espera. Cada `WeaponGrip` tiene `gripStyle`, `handPositionOffset` y `handYawOffset` para afinar el agarre en el inspector (la mano izquierda usa el reflejo). Las manos de los mandos ya no desaparecen por pérdidas breves de seguimiento (`trackingLostGrace`, 2 s) ni mientras sostienen algo. En el XR Interaction Simulator, cuyas manos capturadas señalan con el índice, la mano libre se muestra relajada; con seguimiento de manos real se respetan tus dedos.
+Las armas se agarran siempre hacia la mano, aunque se tomen con el rayo a distancia (`farAttachMode = Near`, forzado en `WeaponGrip`). Cada arma tiene su propio agarre (`WeaponHandPoses`): con mandos, `VRControllerHand` coloca la mano sobre la empuñadura del arma y cierra los dedos con la pose de esa arma; con seguimiento de manos, `HandGripPose` aplica la misma pose a los dedos. Revólver: agarre de pistola con el índice en el gatillo, que se dobla al apretarlo. Hacha: puño cerrado en el mango. Arco: solo se puede agarrar con la **mano izquierda**; mientras lo sostienes, la **mano derecha** lleva una flecha pinzada entre pulgar e índice, y al tomar la cuerda la mano se engancha en ella y la flecha pasa a la cuerda. Tras disparar, la siguiente flecha aparece en la mano al terminar la espera. Cada `WeaponGrip` tiene `gripStyle`, `handPositionOffset` y `handYawOffset` para afinar el agarre en el inspector (la mano izquierda usa el reflejo). Sin arma, las manos están siempre abiertas con todos los dedos extendidos (también al inicio y en el simulador); los botones Grip y gatillo ya no las cierran ni levantan el índice. El hacha se reduce al 70 % de su tamaño mientras está en la mano y recupera su tamaño al soltarla (`heldScale` en `WeaponGrip`; 0 = automático). Las manos de los mandos ya no desaparecen por pérdidas breves de seguimiento (`trackingLostGrace`, 2 s) ni mientras sostienen algo. En el XR Interaction Simulator, cuyas manos capturadas señalan con el índice, la mano libre se muestra relajada; con seguimiento de manos real se respetan tus dedos.
 
 | Arma | Daño | Nota |
 |---|---:|---|
@@ -48,6 +48,17 @@ Se mantiene **un solo duende vivo** y la espera de **20 minutos desde su muerte*
 Selecciona `SPAWN_DUENDE` con **Gizmos** activado para ver el círculo de despertar y el sector frontal. Selecciona el duende durante Play para ver también el alcance de ataque. Los valores y clips se editan en `Assets/SO_/ForestGoblinSettings.asset`.
 
 La persecución utiliza CharacterController y colisiones; no incluye búsqueda de caminos alrededor de árboles o paredes. Para esa navegación hará falta preparar el NavMesh del mapa.
+
+## Nada cae infinitamente
+
+El suelo `FloorWithLake` es un MeshCollider (una superficie sin grosor) y la mesa tiene un collider de 8 cm; con detección discreta, un arma que caía podía atravesarlos en un paso de física. Ahora:
+
+- Las armas usan detección continua (`ContinuousSpeculative`) y no atraviesan la mesa ni el suelo.
+- Al empezar, `GroundSafety` crea bajo todo el terreno un collider de seguridad de 2 m de grosor (`Ground Safety Collider`), 30 m más grande que el suelo.
+- Si un arma soltada acaba bajo el suelo o fuera del mapa, vuelve a su sitio inicial en la mesa.
+- Un enemigo que queda bajo el suelo vuelve a la superficie, y al morir su cuerpo se apoya sobre lo que tenga debajo en vez de flotar o hundirse.
+
+El suelo se registra desde `VRGroundProbe` (campo Environment Root); si cambias de suelo, asígnalo ahí.
 
 ## Suelo irregular
 

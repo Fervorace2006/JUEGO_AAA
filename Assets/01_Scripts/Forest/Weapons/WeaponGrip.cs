@@ -20,6 +20,8 @@ namespace ForestVR
         public Vector3 handPositionOffset;
         [Tooltip("Fine tuning of the right hand's turn around the handle, in degrees. The left hand is mirrored.")]
         public float handYawOffset;
+        [Tooltip("Size multiplier while held, relative to its size in the scene. 0 = automatic (the axe shrinks to 70%).")]
+        [Min(0)] public float heldScale;
         public HandPoseStyle Style { get; private set; }
         public VRBow Bow { get; private set; }
         // The bow is held in the left hand so the right hand draws the arrow.
@@ -32,6 +34,8 @@ namespace ForestVR
         Transform home;
         Rigidbody body;
         float returnAt;
+        Vector3 restScale, spawnPosition;
+        Quaternion spawnRotation;
         XRBaseInputInteractor stickyInteractor;
         XRBaseInputInteractor.InputTriggerType previousTrigger;
         public Vector3 SourcePosition => Owner != null ? Owner.transform.position : transform.position;
@@ -54,6 +58,11 @@ namespace ForestVR
             var style = gripStyle;
             if (style == GripStyle.Auto) style = Bow != null ? GripStyle.Bow : GetComponent<VRRevolver>() != null ? GripStyle.Pistol : GripStyle.Axe;
             Style = style == GripStyle.Pistol ? HandPoseStyle.Pistol : style == GripStyle.Bow ? HandPoseStyle.BowRiser : HandPoseStyle.Axe;
+            restScale = transform.localScale;
+            // The weapon collider and the table are a few centimeters thick: discrete checks let a falling weapon pass through.
+            body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            spawnPosition = transform.position; spawnRotation = transform.rotation;
+            if (heldScale <= 0) heldScale = Style == HandPoseStyle.Axe ? 0.7f : 1;
         }
         public bool canProcess => isActiveAndEnabled;
         // Interactors without handedness (scripted or test hands) can hold any weapon.
@@ -79,13 +88,15 @@ namespace ForestVR
                 input.selectActionTrigger = XRBaseInputInteractor.InputTriggerType.Sticky;
             }
             if (!held.Contains(this)) held.Add(this);
+            // Scaled around the grip (the attach point is the weapon origin), so the handle stays in the hand.
+            transform.localScale = restScale * heldScale;
             var owner = args.interactorObject.transform.GetComponentInParent<Health>();
             if (owner != null) Configure(owner, home);
         }
         void OnRelease(SelectExitEventArgs args)
         {
             if (ReferenceEquals(args.interactorObject, stickyInteractor)) RestoreTrigger();
-            if (!Grab.isSelected) held.Remove(this);
+            if (!Grab.isSelected) { held.Remove(this); transform.localScale = restScale; }
             if (home != null) returnAt = Time.time + 0.75f;
             else { body.isKinematic = false; body.useGravity = true; }
         }
@@ -96,7 +107,16 @@ namespace ForestVR
         }
         void LateUpdate()
         {
-            if (IsHeld || home == null || Time.time < returnAt) return;
+            if (IsHeld) return;
+            // Dropped off the map or through the ground: put it back where it started (the table).
+            if (!body.isKinematic && GroundSafety.IsLost(transform.position))
+            {
+                body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero;
+                body.isKinematic = true; body.useGravity = false;
+                transform.SetPositionAndRotation(spawnPosition, spawnRotation);
+                return;
+            }
+            if (home == null || Time.time < returnAt) return;
             body.isKinematic = true;
             transform.SetPositionAndRotation(home.position, home.rotation);
         }

@@ -45,6 +45,7 @@ namespace JuegoAAA.VR
                 }
             }
             floor = environmentRoot != null ? environmentRoot.GetComponent<Collider>() : null;
+            ForestVR.GroundSafety.Register(floor);
             Physics.SyncTransforms();
             if (floor == null)
             {

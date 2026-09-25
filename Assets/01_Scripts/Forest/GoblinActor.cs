@@ -63,6 +63,7 @@ namespace ForestVR
         void Update()
         {
             if (settings == null || health == null || health.IsDead) return;
+            if (GroundSafety.IsLost(transform.position)) PlaceOnGround();
             verticalSpeed = body.isGrounded ? -2 : verticalSpeed + Physics.gravity.y * Time.deltaTime;
             body.Move(Vector3.up * (verticalSpeed * Time.deltaTime));
             if (target == null || targetHealth == null || targetHealth.IsDead || !target.gameObject.activeInHierarchy)
@@ -174,9 +175,30 @@ namespace ForestVR
         }
         void Die()
         {
-            impactAt = -1; CurrentState = State.Dead; body.enabled = false;
+            impactAt = -1; CurrentState = State.Dead;
+            // The corpse has no collision or gravity: leave it lying on the ground, not floating or under it.
+            if (GroundSafety.IsLost(transform.position)) PlaceOnGround(); else DropToFloorBelow();
+            body.enabled = false;
             Play(settings.death, true);
             Destroy(gameObject, Mathf.Max(settings.corpseSeconds, settings.death != null ? settings.death.length : 0));
+        }
+        void PlaceOnGround()
+        {
+            if (!GroundSafety.TryGetSurface(transform.position, out var surface)) return;
+            bool wasEnabled = body.enabled;
+            body.enabled = false;
+            transform.position = surface;
+            body.enabled = wasEnabled;
+            verticalSpeed = 0;
+        }
+        // Lands the corpse on whatever is under it (ground, rock, bridge), so it neither floats nor sinks.
+        void DropToFloorBelow()
+        {
+            float lift = body.height * 0.5f;
+            float best = float.PositiveInfinity;
+            foreach (var hit in Physics.RaycastAll(transform.position + Vector3.up * lift, Vector3.down, lift + 3, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
+                if (!hit.transform.IsChildOf(transform) && hit.distance < best) best = hit.distance;
+            if (!float.IsPositiveInfinity(best)) transform.position += Vector3.down * (best - lift);
         }
         void LateUpdate()
         {

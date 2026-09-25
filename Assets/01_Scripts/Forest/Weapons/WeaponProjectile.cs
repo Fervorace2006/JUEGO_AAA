@@ -6,9 +6,9 @@ namespace ForestVR
     {
         [Min(0)] public float tipLength;
         public bool stickOnHit = true;
-        [Tooltip("Glowing shooting-star streak behind the projectile that shows where the shot went.")]
+        [Tooltip("Glowing shooting-star streak and a longer tracer line behind the projectile that show where the shot went.")]
         public bool shootingStarTrail;
-        TrailRenderer trail;
+        readonly System.Collections.Generic.List<TrailRenderer> trails = new System.Collections.Generic.List<TrailRenderer>();
         public bool IsFlying { get; private set; }
         WeaponSettings settings;
         Health owner;
@@ -23,7 +23,7 @@ namespace ForestVR
             velocity = direction.normalized * settings.projectileSpeed * Mathf.Lerp(0.35f, 1, Mathf.Clamp01(strength));
             IsFlying = true;
             Destroy(gameObject, settings.projectileLifetime);
-            if (shootingStarTrail) CreateTrail();
+            if (shootingStarTrail) CreateTrails();
             // Sweep from the hand to the tip before flight so a muzzle pushed through a wall cannot bypass it.
             Sweep(safeOrigin, transform.position + direction.normalized * tipLength);
         }
@@ -40,34 +40,59 @@ namespace ForestVR
             }
             velocity = nextVelocity;
         }
-        void CreateTrail()
+        void CreateTrails()
         {
-            var go = new GameObject("Shooting Star Trail");
+            // Shooting star: a wide, short, fiery streak right behind the projectile.
+            trails.Add(CreateTrail("Shooting Star Trail", 0.6f,
+                new AnimationCurve(new Keyframe(0, 0.09f), new Keyframe(0.25f, 0.05f), new Keyframe(1, 0)),
+                new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(new Color(1f, .85f, .35f), .15f), new GradientColorKey(new Color(1f, .5f, .1f), .5f), new GradientColorKey(new Color(1f, .25f, .02f), 1) },
+                new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(.85f, .3f), new GradientAlphaKey(0, 1) }));
+            // Tracer: a thin line that follows the projectile from the muzzle and stays a moment, showing the whole shot path.
+            trails.Add(CreateTrail("Tracer Trail", 2.5f,
+                new AnimationCurve(new Keyframe(0, 0.018f), new Keyframe(1, 0.008f)),
+                new[] { new GradientColorKey(new Color(1f, .95f, .7f), 0), new GradientColorKey(new Color(1f, .75f, .3f), 1) },
+                new[] { new GradientAlphaKey(.9f, 0), new GradientAlphaKey(.5f, .5f), new GradientAlphaKey(0, 1) }));
+        }
+        TrailRenderer CreateTrail(string name, float time, AnimationCurve width, GradientColorKey[] colors, GradientAlphaKey[] alphas)
+        {
+            var go = new GameObject(name);
             go.transform.SetParent(transform, false);
-            trail = go.AddComponent<TrailRenderer>();
-            trail.time = 0.3f; trail.minVertexDistance = 0.05f;
-            trail.widthCurve = new AnimationCurve(new Keyframe(0, 0.025f), new Keyframe(1, 0));
+            var trail = go.AddComponent<TrailRenderer>();
+            trail.time = time; trail.minVertexDistance = 0.1f;
+            trail.widthCurve = width;
             var gradient = new Gradient();
-            gradient.SetKeys(
-                new[] { new GradientColorKey(new Color(1f, .97f, .8f), 0), new GradientColorKey(new Color(1f, .6f, .15f), .35f), new GradientColorKey(new Color(1f, .35f, .05f), 1) },
-                new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(.7f, .35f), new GradientAlphaKey(0, 1) });
+            gradient.SetKeys(colors, alphas);
             trail.colorGradient = gradient;
+            trail.numCapVertices = 2;
             trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; trail.receiveShadows = false;
-            // Sprites/Default is unlit, alpha blended and uses the vertex colours, so the streak glows in the dark forest.
-            var shader = Shader.Find("Sprites/Default");
-            if (shader == null) shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            trail.material = new Material(shader);
+            trail.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
+            trail.sharedMaterial = TrailMaterial;
+            return trail;
         }
-        // Leave the streak where the shot ended so it fades out instead of vanishing with the projectile.
-        void DetachTrail()
+        // Sprites/Default is unlit, alpha blended and uses the vertex colours, so the streaks glow in the dark forest.
+        // One material is shared by every trail instead of one per shot.
+        static Material trailMaterial;
+        static Material TrailMaterial
         {
-            if (trail == null) return;
-            trail.transform.SetParent(null, true);
-            trail.emitting = false; trail.autodestruct = true;
-            Destroy(trail.material, trail.time + .1f);
-            trail = null;
+            get
+            {
+                if (trailMaterial != null) return trailMaterial;
+                var shader = Shader.Find("Sprites/Default");
+                if (shader == null) shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+                return trailMaterial = new Material(shader) { name = "Projectile Trail" };
+            }
         }
-        void OnDestroy() { if (trail != null) Destroy(trail.material); }
+        // Leave the streaks where the shot ended so they fade out instead of vanishing with the projectile.
+        void DetachTrails()
+        {
+            foreach (var trail in trails)
+            {
+                if (trail == null) continue;
+                trail.transform.SetParent(null, true);
+                trail.emitting = false; trail.autodestruct = true;
+            }
+            trails.Clear();
+        }
         bool Sweep(Vector3 from, Vector3 to)
         {
             var delta = to - from;
@@ -84,7 +109,7 @@ namespace ForestVR
                 if (health != null && health != owner) health.TakeHit(damage, source);
                 IsFlying = false;
                 transform.position = hit.point - delta.normalized * tipLength;
-                DetachTrail();
+                DetachTrails();
                 if (stickOnHit) transform.SetParent(hit.transform, true); else Destroy(gameObject);
                 return true;
             }

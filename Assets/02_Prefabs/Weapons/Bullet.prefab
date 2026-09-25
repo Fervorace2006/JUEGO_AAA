@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a83e4382e4c3e24793f8897a20c1a16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.WeaponProjectile
-  tipLength: 0.04
+  tipLength: 0.1
   stickOnHit: 0
   shootingStarTrail: 1
 --- !u!1001 &3289970959999760509
@@ -58,15 +58,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: 2f7a1571727cc2b43b7dc6c341239907, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.04
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2f7a1571727cc2b43b7dc6c341239907, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.04
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2f7a1571727cc2b43b7dc6c341239907, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.04
+      value: 0.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 2f7a1571727cc2b43b7dc6c341239907, type: 3}
       propertyPath: m_LocalPosition.x

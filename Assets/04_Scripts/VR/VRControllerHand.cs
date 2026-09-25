@@ -29,8 +29,8 @@ namespace JuegoAAA.VR
         [SerializeField, Min(0f)] float trackingLostGrace = 2f;
 
         Transform visual, arrowPoint;
-        InputAction grip, trigger, tracked;
-        float gripValue, triggerValue, lastTrackedTime = float.NegativeInfinity;
+        InputAction trigger, tracked;
+        float triggerValue, lastTrackedTime = float.NegativeInfinity;
         bool visible;
         Vector3 restPosition;
         Quaternion restRotation, gripFrame;
@@ -59,7 +59,6 @@ namespace JuegoAAA.VR
         void Awake()
         {
             string device = leftHand ? "<XRController>{LeftHand}" : "<XRController>{RightHand}";
-            grip = new InputAction("Hand Grip", InputActionType.Value, device + "/grip");
             trigger = new InputAction("Hand Trigger", InputActionType.Value, device + "/trigger");
             tracked = new InputAction("Hand Tracked", InputActionType.Value, device + "/isTracked");
             if (handModel == null)
@@ -147,10 +146,10 @@ namespace JuegoAAA.VR
             visual.gameObject.SetActive(false);
         }
 
-        void OnEnable() { grip?.Enable(); trigger?.Enable(); tracked?.Enable(); }
+        void OnEnable() { trigger?.Enable(); tracked?.Enable(); }
         void OnDisable()
         {
-            grip?.Disable(); trigger?.Disable(); tracked?.Disable();
+            trigger?.Disable(); tracked?.Disable();
             SetVisible(false);
         }
 
@@ -174,21 +173,18 @@ namespace JuegoAAA.VR
             if (!visible) return;
 
             float step = 1f - Mathf.Exp(-animationSpeed * Time.deltaTime);
-            gripValue = Mathf.Lerp(gripValue, Mathf.Clamp01(grip.ReadValue<float>()), step);
             triggerValue = Mathf.Lerp(triggerValue, Mathf.Clamp01(trigger.ReadValue<float>()), step);
             for (int f = 0; f < fingerCurl.Length; f++)
             {
-                float target;
-                if (pose.style == HandPoseStyle.None) target = f == Index ? Mathf.Max(triggerValue, gripValue * 0.65f) : gripValue;
-                else target = pose.Curl(f);
+                // Without a weapon the hand stays open with every finger extended, whatever the buttons do.
+                float target = pose.style == HandPoseStyle.None ? 0f : pose.Curl(f);
                 if (f == Index && pose.IndexOnTrigger) target = Mathf.Lerp(target, WeaponHandPoses.TriggerPulledIndex, triggerValue);
                 fingerCurl[f] = Mathf.Lerp(fingerCurl[f], target, step);
             }
             for (int i = 0; i < joints.Length; i++)
             {
                 ref var joint = ref joints[i];
-                float openAngle = joint.finger == Index ? -18f : 0f;
-                joint.bone.localRotation = joint.rest * Quaternion.AngleAxis(Mathf.Lerp(openAngle, joint.angle, fingerCurl[joint.finger]), joint.axis);
+                joint.bone.localRotation = joint.rest * Quaternion.AngleAxis(Mathf.Lerp(0f, joint.angle, fingerCurl[joint.finger]), joint.axis);
             }
 
             // Snap the hand's grip frame onto the weapon; otherwise return to the controller rest pose.
@@ -206,6 +202,6 @@ namespace JuegoAAA.VR
             visual.localRotation = Quaternion.Slerp(visual.localRotation, targetRotation, snapStep);
         }
 
-        void OnDestroy() { grip?.Dispose(); trigger?.Dispose(); tracked?.Dispose(); }
+        void OnDestroy() { trigger?.Dispose(); tracked?.Dispose(); }
     }
 }
