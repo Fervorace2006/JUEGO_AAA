@@ -2,16 +2,28 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Attachment;
+using UnityEngine.XR.Interaction.Toolkit.Filtering;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace ForestVR
 {
     [RequireComponent(typeof(XRGrabInteractable), typeof(Rigidbody))]
-    public sealed class WeaponGrip : MonoBehaviour
+    public sealed class WeaponGrip : MonoBehaviour, IXRSelectFilter
     {
+        public enum GripStyle { Auto, Pistol, Axe, Bow }
         static readonly List<WeaponGrip> held = new List<WeaponGrip>();
         public WeaponSettings settings;
+        [Tooltip("Hand pose while held. Auto picks it from the weapon script (revolver, axe or bow).")]
+        public GripStyle gripStyle;
+        [Tooltip("Fine tuning of the right hand on the grip, in meters of weapon space. The left hand is mirrored.")]
+        public Vector3 handPositionOffset;
+        [Tooltip("Fine tuning of the right hand's turn around the handle, in degrees. The left hand is mirrored.")]
+        public float handYawOffset;
+        public HandPoseStyle Style { get; private set; }
+        public VRBow Bow { get; private set; }
+        // The bow is held in the left hand so the right hand draws the arrow.
+        public InteractorHandedness RequiredHand => Bow != null ? InteractorHandedness.Left : InteractorHandedness.None;
         public Health Owner { get; private set; }
         public XRGrabInteractable Grab { get; private set; }
         public InteractorHandedness HeldBy { get; private set; }
@@ -37,7 +49,16 @@ namespace ForestVR
             // The near-far interactor scales held objects with the thumbstick; weapons keep their scene size.
             Grab.trackScale = false;
             Grab.selectEntered.AddListener(OnGrab); Grab.selectExited.AddListener(OnRelease);
+            Grab.selectFilters.Add(this);
+            Bow = GetComponent<VRBow>();
+            var style = gripStyle;
+            if (style == GripStyle.Auto) style = Bow != null ? GripStyle.Bow : GetComponent<VRRevolver>() != null ? GripStyle.Pistol : GripStyle.Axe;
+            Style = style == GripStyle.Pistol ? HandPoseStyle.Pistol : style == GripStyle.Bow ? HandPoseStyle.BowRiser : HandPoseStyle.Axe;
         }
+        public bool canProcess => isActiveAndEnabled;
+        // Interactors without handedness (scripted or test hands) can hold any weapon.
+        public bool Process(IXRSelectInteractor interactor, IXRSelectInteractable interactable) =>
+            RequiredHand == InteractorHandedness.None || interactor.handedness == InteractorHandedness.None || interactor.handedness == RequiredHand;
         public void Configure(Health owner, Transform holster)
         {
             Owner = owner; home = holster;
@@ -84,6 +105,7 @@ namespace ForestVR
             held.Remove(this);
             RestoreTrigger();
             if (Grab == null) return;
+            Grab.selectFilters.Remove(this);
             Grab.selectEntered.RemoveListener(OnGrab); Grab.selectExited.RemoveListener(OnRelease);
         }
     }

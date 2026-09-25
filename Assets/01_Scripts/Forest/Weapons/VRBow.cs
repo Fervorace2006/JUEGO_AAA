@@ -23,9 +23,15 @@ namespace ForestVR
             stringGrip.selectEntered.AddListener(BeginDraw); stringGrip.selectExited.AddListener(Release);
             grip.Grab.selectExited.AddListener(BowReleased);
         }
+        // Nock frame: forward along the shot, up along the riser.
+        public Pose NockFrame => new Pose(nockPosition, Quaternion.LookRotation(transform.forward, transform.up));
+        public bool IsDrawnBy(InteractorHandedness hand) => drawingHand != null && drawingHand.handedness == hand;
+        // The hand that is not holding the bow carries the next arrow until it nocks it.
+        public bool HasArrowInHand { get; private set; }
         public bool CanDraw(IXRSelectInteractor hand)
         {
-            return grip != null && grip.CanUse && Time.time >= readyAt && !grip.Grab.interactorsSelecting.Contains(hand);
+            return grip != null && grip.CanUse && Time.time >= readyAt && !grip.Grab.interactorsSelecting.Contains(hand)
+                && (hand.handedness == InteractorHandedness.None || hand.handedness != grip.HeldBy);
         }
         void BeginDraw(SelectEnterEventArgs args)
         {
@@ -48,7 +54,19 @@ namespace ForestVR
             else DrawDistance = 0;
             stringGrip.transform.position = nockPosition;
             stringLine.SetPosition(0, upperTip.position); stringLine.SetPosition(1, nockPosition); stringLine.SetPosition(2, lowerTip.position);
-            if (preview != null) preview.transform.SetPositionAndRotation(nockPosition, Quaternion.LookRotation(transform.forward, transform.up));
+            HasArrowInHand = false;
+            if (drawingHand != null)
+            {
+                if (preview != null) preview.transform.SetPositionAndRotation(nockPosition, Quaternion.LookRotation(transform.forward, transform.up));
+            }
+            else if (grip.CanUse && Time.time >= readyAt && arrowPrefab != null
+                && WeaponHandPoses.TryGetArrowPoint(WeaponHandPoses.Other(grip.HeldBy), out var hand))
+            {
+                if (preview == null) preview = Instantiate(arrowPrefab);
+                preview.transform.SetPositionAndRotation(hand.position, hand.rotation);
+                HasArrowInHand = true;
+            }
+            else if (preview != null) Destroy(preview.gameObject);
         }
         void Release(SelectExitEventArgs args)
         {
