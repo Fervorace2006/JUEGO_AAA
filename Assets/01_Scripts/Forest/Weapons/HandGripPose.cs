@@ -61,6 +61,7 @@ namespace ForestVR
         {
             if (events != null) events.jointsUpdated.RemoveListener(OnJointsUpdated);
             WeaponHandPoses.ClearArrowPoint(Side, arrowPoint);
+            if (arrowPoint != null) WeaponHandPoses.ClearPalm(Side, arrowPoint.parent);
             weight = 0;
         }
         void Update()
@@ -68,8 +69,8 @@ namespace ForestVR
             if (events == null) return;
             if (arrowPoint != null)
             {
-                if (events.handIsTracked) WeaponHandPoses.SetArrowPoint(Side, arrowPoint);
-                else WeaponHandPoses.ClearArrowPoint(Side, arrowPoint);
+                if (events.handIsTracked) { WeaponHandPoses.SetArrowPoint(Side, arrowPoint); WeaponHandPoses.SetPalm(Side, arrowPoint.parent); }
+                else { WeaponHandPoses.ClearArrowPoint(Side, arrowPoint); WeaponHandPoses.ClearPalm(Side, arrowPoint.parent); }
             }
             var pose = WeaponHandPoses.Resolve(Side);
             bool simulated = !XRSettings.isDeviceActive;

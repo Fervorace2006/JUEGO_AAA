@@ -113,9 +113,9 @@ namespace ForestVR.Editor
             right.transform.position=bow.restingNock.position; yield return null;
             Check(bow.stringGrip.IsSelectableBy((IXRSelectInteractor)right),"Second hand can grab the string nearby: distance="+Vector3.Distance(right.transform.position,bow.stringGrip.transform.position)+" canDraw="+bow.CanDraw(right));
             right.StartManualInteraction((IXRSelectInteractable)bow.stringGrip); yield return null;
-            right.transform.position=bow.restingNock.position-bow.transform.forward*bowGrip.settings.maximumDraw;
+            right.transform.position=bow.pullEnd.position;
             for(int i=0;i<4;i++) yield return null;
-            Check(Mathf.Abs(bow.DrawDistance-bowGrip.settings.maximumDraw)<.02f,"String tracks full draw");
+            Check(bow.PullAmount>.98f,"String tracks full draw; pull="+bow.PullAmount);
             var bowTarget=Target(bow.restingNock.position+bow.transform.forward*4); Physics.SyncTransforms();
             right.EndManualInteraction();
             until=Time.time+1; while(Time.time<until&&bowTarget.Current==100) yield return null;

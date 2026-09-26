@@ -8,6 +8,10 @@ namespace ForestVR
         public bool stickOnHit = true;
         [Tooltip("Glowing shooting-star streak and a longer tracer line behind the projectile that show where the shot went.")]
         public bool shootingStarTrail;
+        [Tooltip("Width multiplier of the shooting-star streaks.")]
+        [Min(0.1f)] public float trailWidth = 1;
+        [Tooltip("A moving light at the head of the projectile, so it shines and lights up the dark map while it flies.")]
+        public bool glowLight;
         readonly System.Collections.Generic.List<TrailRenderer> trails = new System.Collections.Generic.List<TrailRenderer>();
         public bool IsFlying { get; private set; }
         WeaponSettings settings;
@@ -44,14 +48,41 @@ namespace ForestVR
         {
             // Shooting star: a wide, short, fiery streak right behind the projectile.
             trails.Add(CreateTrail("Shooting Star Trail", 0.6f,
-                new AnimationCurve(new Keyframe(0, 0.09f), new Keyframe(0.25f, 0.05f), new Keyframe(1, 0)),
+                new AnimationCurve(new Keyframe(0, 0.09f * trailWidth), new Keyframe(0.25f, 0.05f * trailWidth), new Keyframe(1, 0)),
                 new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(new Color(1f, .85f, .35f), .15f), new GradientColorKey(new Color(1f, .5f, .1f), .5f), new GradientColorKey(new Color(1f, .25f, .02f), 1) },
                 new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(.85f, .3f), new GradientAlphaKey(0, 1) }));
             // Tracer: a thin line that follows the projectile from the muzzle and stays a moment, showing the whole shot path.
             trails.Add(CreateTrail("Tracer Trail", 2.5f,
-                new AnimationCurve(new Keyframe(0, 0.018f), new Keyframe(1, 0.008f)),
+                new AnimationCurve(new Keyframe(0, 0.018f * trailWidth), new Keyframe(1, 0.008f * trailWidth)),
                 new[] { new GradientColorKey(new Color(1f, .95f, .7f), 0), new GradientColorKey(new Color(1f, .75f, .3f), 1) },
                 new[] { new GradientAlphaKey(.9f, 0), new GradientAlphaKey(.5f, .5f), new GradientAlphaKey(0, 1) }));
+            if (glowLight) CreateGlow(trails[0]);
+        }
+        // The light rides on the shooting-star streak: it follows the head in flight and, when the streak is left at the
+        // impact, fades out there together with it.
+        void CreateGlow(TrailRenderer star)
+        {
+            var go = new GameObject("Shooting Star Glow");
+            go.transform.SetParent(star.transform, false);
+            go.transform.localPosition = Vector3.forward * tipLength;
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Point; light.range = 4; light.intensity = 4;
+            light.color = new Color(1f, .78f, .4f); light.shadows = LightShadows.None;
+            go.AddComponent<GlowFade>().duration = star.time;
+        }
+        sealed class GlowFade : MonoBehaviour
+        {
+            public float duration;
+            Light glow;
+            float start, fadeFrom = -1;
+            void Awake() { glow = GetComponent<Light>(); start = glow.intensity; }
+            void Update()
+            {
+                // Full brightness while attached to the flying projectile; fades once the streak is left behind.
+                if (transform.parent != null && transform.parent.parent != null) return;
+                if (fadeFrom < 0) fadeFrom = Time.time;
+                glow.intensity = start * (1 - Mathf.Clamp01((Time.time - fadeFrom) / Mathf.Max(duration, .01f)));
+            }
         }
         TrailRenderer CreateTrail(string name, float time, AnimationCurve width, GradientColorKey[] colors, GradientAlphaKey[] alphas)
         {

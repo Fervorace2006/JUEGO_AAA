@@ -84,6 +84,20 @@ namespace ForestVR
         {
             if (arrowPoints[(int)hand] == point) arrowPoints[(int)hand] = null;
         }
+        // Palm joint of a hand-tracked (XR Hands) hand: +Z toward the fingers, +Y on the back of the hand.
+        // Only tracked hands register it; controller hands snap themselves onto the weapon instead,
+        // so a weapon following them would chase its own hand.
+        static readonly Transform[] palms = new Transform[3];
+        public static void SetPalm(InteractorHandedness hand, Transform palm) => palms[(int)hand] = palm;
+        public static void ClearPalm(InteractorHandedness hand, Transform palm)
+        {
+            if (palms[(int)hand] == palm) palms[(int)hand] = null;
+        }
+        public static bool TryGetPalm(InteractorHandedness hand, out Transform palm)
+        {
+            palm = hand != InteractorHandedness.None ? palms[(int)hand] : null;
+            return palm != null && palm.gameObject.activeInHierarchy;
+        }
         public static bool TryGetArrowPoint(InteractorHandedness hand, out Transform point)
         {
             point = arrowPoints[(int)hand];
