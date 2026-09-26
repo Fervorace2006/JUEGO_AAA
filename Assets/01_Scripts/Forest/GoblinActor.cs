@@ -10,6 +10,8 @@ namespace ForestVR
     {
         public enum State { Resting, GettingUp, Idle, Walking, Attacking, TurningFromHit, Dead }
         public GoblinSettings settings;
+        [Tooltip("Animator whose hierarchy the clips animate. Empty = the first one under this object.")]
+        public Animator animator;
         public State CurrentState { get; private set; }
         Health health, targetHealth;
         Transform target;
@@ -29,6 +31,8 @@ namespace ForestVR
         bool remembersTarget;
         int attackRepeats;
         float movedAt;
+        Transform hips;
+        Vector3 hipsRest;
         public Health Health => health;
 
         public void Initialize(GoblinSettings config, Transform playerHead, Health playerHealth)
@@ -37,7 +41,7 @@ namespace ForestVR
             health = GetComponent<Health>(); health.Initialize(settings.health);
             body = GetComponent<CharacterController>();
             health.Died += Die; health.Damaged += ReactToHit;
-            var animator = GetComponentInChildren<Animator>();
+            if (animator == null) animator = GetComponentInChildren<Animator>();
             if (animator != null)
             {
                 animator.applyRootMotion = false;
@@ -52,7 +56,10 @@ namespace ForestVR
                 mixer = AnimationMixerPlayable.Create(graph, 2);
                 output.SetSourcePlayable(mixer);
                 graph.Play();
+                foreach (var bone in animator.GetComponentsInChildren<Transform>(true))
+                    if (bone.name == "Hips" || bone.name == "Hip") { hips = bone; hipsRest = transform.InverseTransformPoint(bone.position); break; }
             }
+            EnemyNameplate.Create(this, target);
             Rest();
         }
         void Play(AnimationClip clip, bool restart = false, float fade = 0.25f, float speed = 1)
@@ -80,7 +87,7 @@ namespace ForestVR
             var hands = new List<Transform>();
             foreach (var bone in root.GetComponentsInChildren<Transform>(true))
             {
-                if (bone.name != "R_Forearm" && bone.name != "L_Forearm") continue;
+                if (bone.name != "R_Forearm" && bone.name != "L_Forearm" && bone.name != "Right_LowerArm" && bone.name != "Left_LowerArm") continue;
                 // The deepest point under the forearm (hand or fingertip), in case the hand bone has another name.
                 Transform tip = bone; float far = 0;
                 foreach (var child in bone.GetComponentsInChildren<Transform>(true))
@@ -177,12 +184,13 @@ namespace ForestVR
             {
                 Face(lastKnown, settings.turnSpeed);
                 var before = transform.position;
-                body.Move(Flat(lastKnown - transform.position).normalized * (settings.speed * Time.deltaTime));
+                bool running = settings.run != null && settings.runSpeed > 0 && Flat(lastKnown - transform.position).magnitude > settings.runDistance;
+                body.Move(Flat(lastKnown - transform.position).normalized * ((running ? settings.runSpeed : settings.speed) * Time.deltaTime));
                 if (CurrentState != State.Walking) movedAt = Time.time;
                 CurrentState = State.Walking;
                 // Only fall back to idle after being blocked for a moment, so the walk cycle does not restart every frame.
                 if ((transform.position - before).sqrMagnitude > 0.000001f) movedAt = Time.time;
-                Play(Time.time - movedAt < 0.25f ? settings.walk : settings.idle);
+                Play(Time.time - movedAt < 0.25f ? (running ? settings.run : settings.walk) : settings.idle);
                 idleSince = Time.time;
             }
             else
@@ -290,7 +298,18 @@ namespace ForestVR
             }
             if (health != null && health.IsDead && playing.IsValid() && currentClip != null && playing.GetTime() >= currentClip.length)
             { playing.SetTime(Mathf.Max(0, currentClip.length - 0.001f)); playing.SetSpeed(0); }
+            // Clips imported without "Loop Time" would freeze on their last frame in the looping states.
+            else if (playing.IsValid() && currentClip != null && !currentClip.isLooping && IsLoopingClip(currentClip) && playing.GetTime() >= currentClip.length)
+                playing.SetTime(playing.GetTime() % currentClip.length);
+            if (hips != null && settings != null && settings.lockHipsInPlace)
+            {
+                var local = transform.InverseTransformPoint(hips.position);
+                local.x = hipsRest.x; local.z = hipsRest.z;
+                hips.position = transform.TransformPoint(local);
+            }
         }
+        bool IsLoopingClip(AnimationClip clip) =>
+            clip == settings.idle || clip == settings.walk || clip == settings.run || clip == settings.sleep || clip == settings.relaxing;
         void OnDestroy()
         {
             if (health != null) { health.Died -= Die; health.Damaged -= ReactToHit; }

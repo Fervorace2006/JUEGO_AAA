@@ -21,6 +21,9 @@ namespace ForestVR
         [Min(0)] public float slowAttackImpactDelay = 0.9f;
         [Min(0)] public float slowAttackDamage = 30;
         [Min(0)] public float respawnSeconds = 1200;
+        [Tooltip("Enemies of this type alive at once at the spawner's points. 1 = the next one appears Respawn Seconds after the previous dies; "
+            + "more = a new one appears every Respawn Seconds until this many are alive.")]
+        [Min(1)] public int maxAlive = 1;
         [Tooltip("The spawn points in the spawner only produce a goblin while the player is within this distance.")]
         [Min(0.1f)] public float zoneRadius = 25;
         [Tooltip("Extra goblins placed asleep on random free spots all over the ground. 0 = only the spawner points.")]
@@ -31,5 +34,16 @@ namespace ForestVR
         [Min(1)] public float corpseSeconds = 8;
         public AnimationClip idle, walk, attack, death;
         public AnimationClip sleep, relaxing, gettingUp, slowAttack, attackedFromBack;
+        [Header("Carrera (opcional)")]
+        [Tooltip("Clip used while chasing from farther than Run Distance. Empty = always walks.")]
+        public AnimationClip run;
+        [Min(0)] public float runSpeed = 0;
+        [Min(0)] public float runDistance = 4;
+        [Tooltip("For clips that move the hips forward instead of animating in place: keeps the body over the character.")]
+        public bool lockHipsInPlace;
+        [Header("Nombre y barra de vida sobre la cabeza")]
+        public string displayName = "Duende";
+        public Color healthBarColor = new Color(.16f, .85f, .25f);
+        [Min(0.1f)] public float nameplateScale = 1;
     }
 }

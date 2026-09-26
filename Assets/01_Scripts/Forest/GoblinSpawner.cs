@@ -19,6 +19,7 @@ namespace ForestVR
         double readyAt;
         bool waitingForDeath;
         readonly List<Transform> candidates = new List<Transform>();
+        readonly List<GoblinActor> alive = new List<GoblinActor>();
         sealed class MapSlot { public Vector3 position; public Quaternion rotation; public GoblinActor actor; public bool spawned; public double readyAt; }
         readonly List<MapSlot> mapSlots = new List<MapSlot>();
         bool populationPlaced;
@@ -36,6 +37,7 @@ namespace ForestVR
         {
             if (playerHealth == null || playerHealth.IsDead || !player.gameObject.activeInHierarchy) return;
             UpdatePopulation();
+            if (settings.maxAlive > 1) { UpdateWaves(); return; }
             // Unexpected removal also starts the cooldown rather than spawning immediately.
             if (waitingForDeath)
             {
@@ -53,6 +55,26 @@ namespace ForestVR
             current.Initialize(settings, head, playerHealth);
             waitingForDeath = true;
             current.Health.Died += BeginCooldown;
+        }
+        // Timed spawning: one more every respawnSeconds (the first right away) while fewer than maxAlive are alive.
+        void UpdateWaves()
+        {
+            alive.RemoveAll(a => a == null || a.Health == null || a.Health.IsDead);
+            if (Time.timeAsDouble < readyAt || alive.Count >= settings.maxAlive) return;
+            candidates.Clear();
+            if (spawnPointsRoot != null) foreach (Transform point in spawnPointsRoot) AddCandidate(point);
+            foreach (var point in spawnPoints) AddCandidate(point);
+            if (candidates.Count == 0) return;
+            var chosen = candidates[Random.Range(0, candidates.Count)];
+            // Spread around the point so a new one does not appear inside one still standing there.
+            var offset = Random.insideUnitCircle * 1.5f;
+            var position = chosen.position + new Vector3(offset.x, 0, offset.y);
+            if (GroundSafety.TryGetSurface(position, out var surface) && Mathf.Abs(surface.y - chosen.position.y) < 1) position.y = surface.y + 0.05f;
+            else position = chosen.position;
+            var actor = Instantiate(goblinPrefab, position, chosen.rotation).GetComponent<GoblinActor>();
+            actor.Initialize(settings, head, playerHealth);
+            alive.Add(actor);
+            readyAt = Time.timeAsDouble + settings.respawnSeconds;
         }
         void AddCandidate(Transform point)
         {

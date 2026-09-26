@@ -45,10 +45,14 @@ namespace ForestVR.Editor
                         floor.transform.localScale = new Vector3(100, 1, 100);
                         spawner = new GameObject("Spawner").AddComponent<GoblinSpawner>();
                         spawner.player = player.transform;
-                        spawner.settings = AssetDatabase.LoadAssetAtPath<GoblinSettings>("Assets/SO_/ForestGoblinSettings.asset");
+                        var goblinAsset = AssetDatabase.LoadAssetAtPath<GoblinSettings>("Assets/SO_/ForestGoblinSettings.asset");
+                        Check(goblinAsset.respawnSeconds == 300 && goblinAsset.maxAlive == 3, "Duendes: one more every 5 minutes, up to 3 at the spawn");
+                        // The one-at-a-time mode (used by the werewolf) with a 20 minute cooldown and a spawn zone around the point.
+                        spawner.settings = UnityEngine.Object.Instantiate(goblinAsset);
+                        spawner.settings.maxAlive = 1; spawner.settings.respawnSeconds = 1200; spawner.settings.zoneRadius = 25; spawner.settings.mapPopulation = 0;
                         spawner.goblinPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/02_Prefabs/Enemy/ForestGoblin.prefab");
                         spawner.spawnPointsRoot = new GameObject("Points").transform;
-                        Check(spawner.settings.respawnSeconds == 1200, "Default cooldown is 20 minutes");
+                        Check(spawner.settings.respawnSeconds == 1200, "Single-spawn cooldown is 20 minutes");
                         var health = new GameObject("Health test").AddComponent<Health>();
                         int deaths = 0; health.Died += () => deaths++;
                         health.TakeDamage(-5); Check(health.Current == 100, "Negative damage ignored");

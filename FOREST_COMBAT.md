@@ -24,6 +24,36 @@ Los proyectiles comprueban todo el trayecto entre fotogramas para evitar atraves
 
 En el XR Interaction Simulator, selecciona el mando con Tab y usa G para Grip y T para el gatillo. Haz clic en Game para que reciba el teclado. Con el visor, usa los botones fisicos equivalentes.
 
+## Enemigos: Duende, Zombie y Hombre Lobo
+
+| Enemigo | Rol | Vida | Daño | Barra |
+|---|---|---:|---|---|
+| Duende | El más débil | 100 | 10 / 30 | Verde |
+| Zombie | Intermedio | 200 | 20 (ataque) / 35 (mordida al cuello) | Verde |
+| Hombre Lobo | Jefe final | 1500 | 35 | Roja y 1,4 veces más grande |
+
+Los tres usan `GoblinActor` con su propio `GoblinSettings` (`Assets/SO_/ForestGoblinSettings`, `ForestZombieSettings`, `ForestWerewolfSettings`). Sobre la cabeza de cada uno aparece su nombre y debajo su barra de vida (`EnemyNameplate`), siempre mirando al jugador; se oculta al morir o a más de 40 m. El nombre, el color y el tamaño de la barra están en `displayName`, `healthBarColor` y `nameplateScale` de cada configuración.
+
+Aparición (`respawnSeconds` y `maxAlive` en cada configuración): cada 5 minutos aparece un duende nuevo en `SPAWN_DUENDE` y un zombie nuevo en `SPAWN_ZOMBIE` (el primero al empezar), hasta 3 vivos de cada uno en su punto; al morir alguno, el siguiente llega en la próxima tanda. Salen repartidos hasta 1,5 m alrededor del punto y aparecen aunque el jugador esté lejos (`zoneRadius` 500). El Hombre Lobo usa `maxAlive` 1: uno solo, que vuelve 5 minutos después de morir. Los 10 duendes repartidos por el mapa (`mapPopulation` del duende) siguen igual y cada uno reaparece 5 minutos después de morir.
+
+Estados según sus animaciones:
+- **Zombie:** en reposo de pie (`zombie idle`); al ver al jugador grita (`zombie scream`) y lo persigue caminando (`zombie walk`, 1,1 m/s) o corriendo si está a más de 5 m (`zombie run`, 2,6 m/s). Alterna `zombie attack` y `zombie neck bite`. Muere con `zombie death`. Solo aparecen en `SPAWN_ZOMBIE`.
+- **Hombre Lobo:** en reposo `WolfIdle`; persigue con `wolfwalk` (1,8 m/s) o `WolfRun` (5 m/s), ataca con `WolfAttack`, si lo golpean por la espalda se gira con `wolf Right Turn 90` y muere con `wolfdied`. Nunca hay más de un lobo: aparece en `SPAWN_HOMBRE_LOBO`, lejos del inicio, y vuelve 5 minutos después de morir.
+
+Prefabs: `Assets/02_Prefabs/Enemy/ForestZombie.prefab` y `ForestWerewolf.prefab`. Se generan (o actualizan) con el menú **Forest VR > Enemigos > Crear zombie y hombre lobo y colocarlos en la escena**, que con `ForestScene` abierta también crea `Zombie Spawner` y `Hombre Lobo Spawner` con sus puntos sobre suelo libre. Si en la escena hay objetos llamados `Spawn Zombie`, `Spawn Zombie (1)`... y `Spawn Wolf`, el menú usa esos puntos tal como están (los zombies salen al azar de cualquiera de ellos); si no, crea `SPAWN_ZOMBIE` y `SPAWN_HOMBRE_LOBO` sobre suelo libre. Los puntos se pueden mover libremente. El modelo Tripo de ambos conserva la rotación de ejes de Blender en `Armature`; el menú la pone a cero para que las animaciones de Mixamo no los tumben.
+
+## Preparación automática de ForestScene
+
+Al cargar `ForestScene`, `ForestSceneSetup` (datos en `Assets/Resources/ForestEnemyRoster.asset`) prepara la escena sin tocarla a mano:
+
+- **Zombie y Hombre Lobo** reciben su spawner junto a `SPAWN_DUENDE`, en el lado opuesto al inicio del jugador (zombie a unos 6 m del punto del duende, lobo a unos 10 m), sobre suelo libre. Si la escena ya tiene un spawner con esa configuración (hecho a mano o con el menú), se respeta ese. El anclaje y la distancia de cada uno se cambian en el roster (`anchorName`, `offset`).
+- **Árboles:** solo bloquea el tronco (una cápsula por árbol, medida de cada modelo); el collider que cubría toda la copa se desactiva. Enemigos, balas y flechas chocan con los troncos.
+- **Jugador:** `VRBodyBlocker` lo empuja fuera de los troncos, porque caminar con el visor (o WASD del simulador) mueve la cámara sin física.
+
+Las flechas que se clavan en objetos estirados (el suelo `FloorWithLake` está escalado 8,9 x 1 x 8,3) ya no se emparentan con ellos, así que no se deforman ni parecen atravesar el suelo; quedan hundidas unos 6 cm. En enemigos siguen clavadas y se mueven con ellos.
+
+La linterna se mantiene como estaba (cono de 110°, intensidad 8, alcance 40 m, niebla 0,025). El perfil URP "Performance" del proyecto ilumina cada objeto (el suelo entero es uno) con una única luz extra, así que la luz de las flechas tiene prioridad baja y nunca le quita la linterna al suelo. La barra de vida del jugador está en la esquina inferior izquierda.
+
 ## Vida, muerte y recuperacion
 
 La vida del jugador es una barra verde en la esquina inferior izquierda de la vista (`HudHealthBar`, hija de la camara y dibujada encima de la escena) que se acorta al recibir dano. Cuando llega a cero, el duende deja de atacar y las armas dejan de hacer dano: no es un bloqueo de la IA. Ahora aparece el aviso **Sin vida**. Pulsa **A o X** en los controles para recuperar la vida y seguir la prueba; en el editor/simulador tambien funciona **F8**. Esta accion solo funciona estando muerto y no reinicia la escena ni revive al duende.

@@ -139,7 +139,7 @@ namespace ForestVR.Editor
             Check(axeTarget.Current==100,"Stationary axe deals no damage");
             until=Time.time+.25f; while(Time.time<until) { right.transform.position+=Vector3.forward*(2.5f*Time.deltaTime); yield return null; }
             float afterSwing=axeTarget.Current;
-            Check(afterSwing>=75 && afterSwing<=85,"2.5 m/s axe swing deals ~21 damage once; health="+afterSwing);
+            Check(afterSwing>=75 && afterSwing<=87.5f,"Axe swing deals 12.5-25 damage once (scales with swing speed); health="+afterSwing);
             until=Time.time+.8f; while(Time.time<until) yield return null;
             Check(axeTarget.Current==afterSwing,"Holding axe against target does not repeat damage");
             right.EndManualInteraction(); UnityEngine.Object.Destroy(axe.gameObject); UnityEngine.Object.Destroy(axeTarget.gameObject);

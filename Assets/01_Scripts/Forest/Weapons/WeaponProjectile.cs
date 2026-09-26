@@ -68,6 +68,8 @@ namespace ForestVR
             var light = go.AddComponent<Light>();
             light.type = LightType.Point; light.range = 4; light.intensity = 4;
             light.color = new Color(1f, .78f, .4f); light.shadows = LightShadows.None;
+            // The URP profile gives each object one extra light: never take the floor's slot from the flashlight.
+            light.renderMode = LightRenderMode.ForceVertex;
             go.AddComponent<GlowFade>().duration = star.time;
         }
         sealed class GlowFade : MonoBehaviour
@@ -124,6 +126,9 @@ namespace ForestVR
             }
             trails.Clear();
         }
+        const float EmbedDepth = 0.06f;
+        static bool IsUniform(Vector3 scale) =>
+            Mathf.Abs(scale.x - scale.y) <= Mathf.Abs(scale.x) * 0.02f && Mathf.Abs(scale.x - scale.z) <= Mathf.Abs(scale.x) * 0.02f;
         bool Sweep(Vector3 from, Vector3 to)
         {
             var delta = to - from;
@@ -139,9 +144,15 @@ namespace ForestVR
                 var health = hit.collider.GetComponentInParent<Health>();
                 if (health != null && health != owner) health.TakeHit(damage, source);
                 IsFlying = false;
-                transform.position = hit.point - delta.normalized * tipLength;
+                // A stuck arrow sinks a few centimetres so it looks embedded, not balanced on the surface.
+                // A sweep that starts already touching a surface reports the point as (0,0,0): use the start instead.
+                var point = hit.distance <= 0 && hit.point == Vector3.zero ? from : hit.point;
+                transform.position = point - delta.normalized * (stickOnHit ? Mathf.Max(0, tipLength - EmbedDepth) : tipLength);
                 DetachTrails();
-                if (stickOnHit) transform.SetParent(hit.transform, true); else Destroy(gameObject);
+                // Follow what it hit (an enemy) only when that object is uniformly scaled: under a stretched parent
+                // like the floor (8.9 x 1 x 8.3) the arrow would be deformed and look like it goes through the ground.
+                if (stickOnHit) { if (IsUniform(hit.transform.lossyScale)) transform.SetParent(hit.transform, true); }
+                else Destroy(gameObject);
                 return true;
             }
             return false;

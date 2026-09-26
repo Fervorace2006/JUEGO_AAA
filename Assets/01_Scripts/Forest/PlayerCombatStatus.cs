@@ -15,7 +15,8 @@ namespace ForestVR
             if (health != null) return;
             health = playerHealth;
             hint = VRWorldLabel.Create(head, "Player Health", new Vector3(0, .18f, .85f));
-            bar = HudHealthBar.Create(head, new Vector3(-.17f, -.15f, .45f), new Vector2(.14f, .012f));
+            // Lower left of the view, out of the way of the aim point.
+            bar = HudHealthBar.Create(head, new Vector3(-.30f, -.20f, .45f), new Vector2(.14f, .012f));
             health.onHealthChanged.AddListener(Refresh);
             recover = new InputAction("Recover player health", InputActionType.Button);
             recover.AddBinding("<XRController>{RightHand}/primaryButton");
