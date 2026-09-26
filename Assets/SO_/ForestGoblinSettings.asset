@@ -16,7 +16,7 @@ MonoBehaviour:
   damage: 10
   speed: 1.6
   detectionRadius: 10
-  wakeRadius: 8
+  wakeRadius: 3
   visionAngle: 110
   memorySeconds: 4
   turnSpeed: 180
@@ -27,7 +27,10 @@ MonoBehaviour:
   slowAttackImpactDelay: 0.9
   slowAttackDamage: 30
   respawnSeconds: 1200
-  zoneRadius: 25
+  zoneRadius: 60
+  mapPopulation: 10
+  populationSpacing: 12
+  populationMinPlayerDistance: 20
   corpseSeconds: 8
   idle: {fileID: 7400000, guid: 7a4341f48576ad14d9c86601670dce8a, type: 2}
   walk: {fileID: 7400000, guid: f7321ceb7548b6f4abf34fe6e576d0ba, type: 2}

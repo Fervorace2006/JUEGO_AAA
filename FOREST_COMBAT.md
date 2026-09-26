@@ -36,12 +36,12 @@ La escena contiene dos rigs: `Forest VR Player`, desactivado, y `XR Origin Hands
 
 `SPAWN_DUENDE` está asignado explícitamente al spawner en la posición que guardaste `(3.23, 2, -9.28)`. No necesita moverse ni cambiar de padre. Se mantiene el contenedor opcional `Goblin Spawn Points` para futuros puntos.
 
-Se mantiene **un solo duende vivo** y la espera de **20 minutos desde su muerte**. Tras la espera solo aparece si el jugador vivo y activo está a 25 metros o menos de un punto. El reloj es tiempo de juego y no persiste al cerrar la escena.
+En los puntos del spawner hay **un solo duende vivo** y una espera de **20 minutos desde su muerte**. Tras la espera solo aparece si el jugador vivo y activo está a 60 metros o menos de un punto (antes 25). Además hay **10 duendes repartidos por todo el mapa** (`mapPopulation`), colocados al empezar en sitios libres del suelo: no en el agua, sobre árboles, rocas o la mesa, ni en pendientes de más de 25°. Quedan separados al menos 12 m entre sí y a 20 m o más del jugador. Cada uno reaparece en su sitio 20 minutos después de morir, nunca a menos de 20 m del jugador. El reloj es tiempo de juego y no persiste al cerrar la escena.
 
 1. Aparece en Sleep o Relaxing. Estos dos archivos contienen poses de un fotograma, mantenidas en bucle.
-2. Detecta proximidad en 360° a 8 m, con línea de visión, y reproduce Getting Up.
+2. **Dormido o descansando no se levanta ni te persigue** a menos que estés muy cerca: 3 m (antes 8), con línea de visión, o que lo golpees. Entonces reproduce Getting Up.
 3. Ya levantado, ve en un sector frontal de 110° hasta 15 m. Persigue al jugador visible; al perderlo conserva su última posición durante 4 segundos, no conoce su posición nueva a través de paredes.
-4. Ataca únicamente a 1,5 m o menos. Alterna el ataque rápido (20 de daño) y el lento (30), con tiempos de impacto distintos. Volver a comprobar distancia, orientación y obstáculos en el instante del golpe permite esquivarlo.
+4. Ataca únicamente a 1,5 m o menos. Alterna el ataque rápido y el lento (nunca el mismo tres veces seguidas), con ligeras variaciones de velocidad. Las animaciones se mezclan con transiciones suaves en vez de cortes. Durante el amago sigue girando hacia ti y da un paso para alcanzarte; el daño se aplica en el momento del golpe, medido automáticamente en cada animación (cuando la mano llega más adelante). Volver a comprobar distancia, orientación y obstáculos en el instante del golpe permite esquivarlo.
 5. Si recibe daño por detrás mientras camina o está en idle, reproduce IfAttackBack y gira hacia el origen del golpe.
 6. Al morir reproduce Death, deja de atacar y desactiva su colisión. El cadáver se elimina después de 8 segundos.
 

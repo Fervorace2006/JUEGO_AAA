@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -13,13 +14,21 @@ namespace ForestVR
         Health health, targetHealth;
         Transform target;
         CharacterController body;
+        const float AttackFadeIn = 0.12f, AttackFadeOut = 0.3f;
+        // Moment of the swing in each attack clip, measured once from the clip itself.
+        static readonly Dictionary<AnimationClip, float> strikeTimes = new Dictionary<AnimationClip, float>();
         PlayableGraph graph;
         AnimationPlayableOutput output;
-        AnimationClipPlayable playing;
-        AnimationClip currentClip;
+        // Two-slot mixer: slot 0 is the clip playing now, slot 1 the one fading out, so every change crossfades.
+        AnimationMixerPlayable mixer;
+        AnimationClipPlayable playing, previous;
+        AnimationClip currentClip, lastAttackClip;
+        float blend = 1, fadeDuration;
         float nextAttack, impactAt = -1, stateEnds, verticalSpeed, lastSeenAt, idleSince, pendingDamage;
         Vector3 lastKnown;
         bool remembersTarget;
+        int attackRepeats;
+        float movedAt;
         public Health Health => health;
 
         public void Initialize(GoblinSettings config, Transform playerHead, Health playerHealth)
@@ -33,20 +42,74 @@ namespace ForestVR
             {
                 animator.applyRootMotion = false;
                 animator.runtimeAnimatorController = null;
+                // Goblins sleep all over the map: skip writing bones for the ones nobody sees.
+                animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+                MeasureStrike(animator.transform, settings.attack);
+                MeasureStrike(animator.transform, settings.slowAttack);
                 graph = PlayableGraph.Create("Goblin animations");
                 graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
                 output = AnimationPlayableOutput.Create(graph, "Body", animator);
+                mixer = AnimationMixerPlayable.Create(graph, 2);
+                output.SetSourcePlayable(mixer);
                 graph.Play();
             }
             Rest();
         }
-        void Play(AnimationClip clip, bool restart = false)
+        void Play(AnimationClip clip, bool restart = false, float fade = 0.25f, float speed = 1)
         {
             if (!graph.IsValid() || clip == null || (!restart && currentClip == clip)) return;
-            if (playing.IsValid()) graph.DestroyPlayable(playing);
+            if (previous.IsValid()) { graph.Disconnect(mixer, 1); graph.DestroyPlayable(previous); }
+            if (playing.IsValid()) { graph.Disconnect(mixer, 0); previous = playing; graph.Connect(previous, 0, mixer, 1); }
             playing = AnimationClipPlayable.Create(graph, clip);
-            playing.SetApplyFootIK(false); output.SetSourcePlayable(playing); currentClip = clip;
+            playing.SetApplyFootIK(false); playing.SetSpeed(speed);
+            graph.Connect(playing, 0, mixer, 0);
+            currentClip = clip; fadeDuration = fade;
+            blend = fade > 0 && previous.IsValid() ? 0 : 1;
+            ApplyBlend();
         }
+        void ApplyBlend()
+        {
+            mixer.SetInputWeight(0, blend);
+            mixer.SetInputWeight(1, previous.IsValid() ? 1 - blend : 0);
+            if (blend >= 1 && previous.IsValid()) { graph.Disconnect(mixer, 1); graph.DestroyPlayable(previous); }
+        }
+        // Samples the clip on this goblin and keeps the time a hand reaches farthest forward: the moment the blow lands.
+        void MeasureStrike(Transform root, AnimationClip clip)
+        {
+            if (clip == null || strikeTimes.ContainsKey(clip)) return;
+            var hands = new List<Transform>();
+            foreach (var bone in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (bone.name != "R_Forearm" && bone.name != "L_Forearm") continue;
+                // The deepest point under the forearm (hand or fingertip), in case the hand bone has another name.
+                Transform tip = bone; float far = 0;
+                foreach (var child in bone.GetComponentsInChildren<Transform>(true))
+                {
+                    float d = (child.position - bone.position).sqrMagnitude;
+                    if (d > far) { far = d; tip = child; }
+                }
+                hands.Add(tip);
+            }
+            float best = float.NegativeInfinity, strike = -1;
+            if (hands.Count > 0)
+            {
+                const int samples = 40;
+                for (int i = 0; i <= samples; i++)
+                {
+                    // Ignore the very start and end: wind-up and recovery.
+                    float time = clip.length * Mathf.Lerp(0.15f, 0.85f, i / (float)samples);
+                    clip.SampleAnimation(root.gameObject, time);
+                    foreach (var hand in hands)
+                    {
+                        float reach = transform.InverseTransformPoint(hand.position).z;
+                        if (reach > best) { best = reach; strike = time; }
+                    }
+                }
+            }
+            strikeTimes[clip] = strike;
+        }
+        float StrikeTime(AnimationClip clip, float fallback) =>
+            clip != null && strikeTimes.TryGetValue(clip, out float time) && time > 0 ? time : fallback;
         void Rest()
         {
             CurrentState = State.Resting; remembersTarget = false;
@@ -56,7 +119,7 @@ namespace ForestVR
         void Wake()
         {
             CurrentState = State.GettingUp;
-            Play(settings.gettingUp != null ? settings.gettingUp : settings.idle, true);
+            Play(settings.gettingUp != null ? settings.gettingUp : settings.idle, true, 0.35f);
             stateEnds = Time.time + (settings.gettingUp != null ? settings.gettingUp.length : 0.2f);
             idleSince = stateEnds;
         }
@@ -85,6 +148,13 @@ namespace ForestVR
             }
             if (CurrentState == State.Attacking)
             {
+                if (impactAt >= 0)
+                {
+                    // Wind-up: keep tracking the player and step in so the blow reaches; after the swing it is committed.
+                    Face(target.position, settings.turnSpeed * 1.5f);
+                    if (distance > settings.attackRange * 0.6f)
+                        body.Move(delta.normalized * (Mathf.Min(settings.speed * 1.2f, distance - settings.attackRange * 0.6f) * Time.deltaTime));
+                }
                 if (impactAt >= 0 && Time.time >= impactAt)
                 {
                     impactAt = -1;
@@ -108,8 +178,11 @@ namespace ForestVR
                 Face(lastKnown, settings.turnSpeed);
                 var before = transform.position;
                 body.Move(Flat(lastKnown - transform.position).normalized * (settings.speed * Time.deltaTime));
+                if (CurrentState != State.Walking) movedAt = Time.time;
                 CurrentState = State.Walking;
-                Play((transform.position - before).sqrMagnitude > 0.000001f ? settings.walk : settings.idle);
+                // Only fall back to idle after being blocked for a moment, so the walk cycle does not restart every frame.
+                if ((transform.position - before).sqrMagnitude > 0.000001f) movedAt = Time.time;
+                Play(Time.time - movedAt < 0.25f ? settings.walk : settings.idle);
                 idleSince = Time.time;
             }
             else
@@ -125,13 +198,21 @@ namespace ForestVR
         }
         void Attack()
         {
-            bool slow = settings.slowAttack != null && Random.value < 0.5f;
+            // Mostly alternate the quick and the slow attack; never the same one three times in a row.
+            bool slow = settings.slowAttack != null && settings.attack != null
+                ? (attackRepeats >= 2 ? lastAttackClip != settings.slowAttack : Random.value < (lastAttackClip == settings.slowAttack ? 0.3f : 0.7f))
+                : settings.slowAttack != null;
             var clip = slow ? settings.slowAttack : settings.attack;
-            float delay = slow ? settings.slowAttackImpactDelay : settings.attackImpactDelay;
+            attackRepeats = clip == lastAttackClip ? attackRepeats + 1 : 1; lastAttackClip = clip;
+            // Slight speed variation so repeated attacks do not look identical; the impact follows the speed.
+            float speed = Random.Range(0.95f, 1.12f);
+            float delay = StrikeTime(clip, slow ? settings.slowAttackImpactDelay : settings.attackImpactDelay) / speed;
             pendingDamage = slow ? settings.slowAttackDamage : settings.damage;
-            CurrentState = State.Attacking; Play(clip, true);
+            CurrentState = State.Attacking; Play(clip, true, AttackFadeIn, speed);
             impactAt = Time.time + delay;
-            stateEnds = Time.time + Mathf.Max(delay + 0.05f, clip != null ? clip.length : 1);
+            // Leave a little early so the recovery blends into the next pose instead of snapping.
+            float length = clip != null ? clip.length / speed : 1;
+            stateEnds = Time.time + Mathf.Max(delay + 0.1f, length - AttackFadeOut);
             nextAttack = Mathf.Max(stateEnds, Time.time + settings.attackCooldown);
         }
         void ReactToHit(Vector3 source)
@@ -202,6 +283,11 @@ namespace ForestVR
         }
         void LateUpdate()
         {
+            if (graph.IsValid() && blend < 1)
+            {
+                blend = fadeDuration > 0 ? Mathf.MoveTowards(blend, 1, Time.deltaTime / fadeDuration) : 1;
+                ApplyBlend();
+            }
             if (health != null && health.IsDead && playing.IsValid() && currentClip != null && playing.GetTime() >= currentClip.length)
             { playing.SetTime(Mathf.Max(0, currentClip.length - 0.001f)); playing.SetSpeed(0); }
         }

@@ -23,6 +23,21 @@ namespace ForestVR
             box.size = new Vector3(bounds.size.x + CatchMargin, CatchThickness, bounds.size.z + CatchMargin);
         }
 
+        public static bool IsGround(Collider collider) => collider != null && grounds.Contains(collider);
+
+        // Area covered by the registered ground.
+        public static bool TryGetBounds(out Bounds bounds)
+        {
+            bounds = default;
+            bool found = false;
+            foreach (var ground in grounds)
+            {
+                if (ground == null) continue;
+                if (found) bounds.Encapsulate(ground.bounds); else { bounds = ground.bounds; found = true; }
+            }
+            return found;
+        }
+
         // Ground surface straight above or below the position, if it is over the registered ground.
         public static bool TryGetSurface(Vector3 position, out Vector3 surface)
         {

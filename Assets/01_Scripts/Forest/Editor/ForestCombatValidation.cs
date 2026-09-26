@@ -62,7 +62,11 @@ namespace ForestVR.Editor
             actor.Initialize(config,head,hp);
             Check(actor.CurrentState==GoblinActor.State.Resting,"Goblin starts resting");
             for(int i=0;i<3;i++) yield return null;
-            Check(actor.CurrentState==GoblinActor.State.GettingUp,"Nearby player wakes goblin");
+            Check(actor.CurrentState==GoblinActor.State.Resting,"Sleeping goblin ignores a player outside the wake radius");
+            player.transform.position=new Vector3(0,0,config.wakeRadius*0.6f);
+            for(int i=0;i<3;i++) yield return null;
+            Check(actor.CurrentState==GoblinActor.State.GettingUp,"Very close player wakes goblin");
+            player.transform.position=new Vector3(0,0,6);
             float until=Time.time+config.gettingUp.length+.3f; while(Time.time<until) yield return null;
             Check(actor.CanSeeTarget()&&actor.CurrentState==GoblinActor.State.Walking,"Front target is pursued after getting up");
             player.transform.position=actor.transform.position-actor.transform.forward*6;
