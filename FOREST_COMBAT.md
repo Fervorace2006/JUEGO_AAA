@@ -14,9 +14,9 @@ Las armas se agarran siempre hacia la mano, aunque se tomen con el rayo a distan
 
 | Arma | Daño | Nota |
 |---|---:|---|
-| Revólver | 100 | Un impacto mata al duende con 100 de vida. |
-| Arco | Hasta 55 | Daño y velocidad aumentan con la tensión de la cuerda (máxima en `Pull End`). |
-| Hacha | 12,5 a 50 | Requiere un golpe de al menos 1,2 m/s; 25 a 3 m/s y el doble a 6 m/s. Breve espera entre impactos. |
+| Revólver | 150 | Un impacto mata al duende con 100 de vida. |
+| Arco | Hasta 100 | Daño y velocidad aumentan con la tensión de la cuerda (máxima en `Pull End`). |
+| Hacha | 40 | Requiere un golpe de al menos 1,2 m/s; el filo también alcanza enemigos que ya estaban en contacto al empezar el movimiento. Breve espera entre impactos. |
 
 Los ajustes están en `Assets/SO_/Weapons`. Los cinco prefabs están en `Assets/02_Prefabs/Weapons`: VRBow, VRAxe, VRRevolver, Arrow y Bullet. Los modelos originales permanecen en TripoModels. La cuerda es un LineRenderer de Unity con tres puntos y un agarre independiente. El cuerpo del arco permanece rígido porque el modelo no tiene huesos para doblar las palas. Se revisó el ejemplo `VR-Archery-in-Unity-2022-main` que dejaste en la raiz del proyecto; el arco del juego conserva su implementacion compatible con el XR Interaction Toolkit actual y toma la distancia de estiramiento al soltar la cuerda.
 
@@ -30,17 +30,17 @@ En el XR Interaction Simulator, selecciona el mando con Tab y usa G para Grip y 
 |---|---|---:|---|---|
 | Duende | El más débil | 100 | 10 / 30 | Verde |
 | Zombie | Intermedio | 200 | 20 (ataque) / 35 (mordida al cuello) | Verde |
-| Hombre Lobo | Jefe final | 1500 | 35 | Roja y 1,4 veces más grande |
+| Hombre Lobo | Jefe final | 1000 | 35 | Roja y 1,4 veces más grande |
 
 Los tres usan `GoblinActor` con su propio `GoblinSettings` (`Assets/SO_/ForestGoblinSettings`, `ForestZombieSettings`, `ForestWerewolfSettings`). Sobre la cabeza de cada uno aparece su nombre y debajo su barra de vida (`EnemyNameplate`), siempre mirando al jugador; se oculta al morir o a más de 40 m. El nombre, el color y el tamaño de la barra están en `displayName`, `healthBarColor` y `nameplateScale` de cada configuración.
 
-Aparición (`respawnSeconds` y `maxAlive` en cada configuración): cada 5 minutos aparece un duende nuevo en `SPAWN_DUENDE` y un zombie nuevo en `SPAWN_ZOMBIE` (el primero al empezar), hasta 3 vivos de cada uno en su punto; al morir alguno, el siguiente llega en la próxima tanda. Salen repartidos hasta 1,5 m alrededor del punto y aparecen aunque el jugador esté lejos (`zoneRadius` 500). El Hombre Lobo usa `maxAlive` 1: uno solo, que vuelve 5 minutos después de morir. Los 10 duendes repartidos por el mapa (`mapPopulation` del duende) siguen igual y cada uno reaparece 5 minutos después de morir.
+Aparición (`respawnSeconds` y `maxAlive` en cada configuración): ForestScene guarda un `Zombie Spawner` conectado a `Spawn Zombie` y un `Hombre Lobo Spawner` conectado a `Spawn Wolf`, ambos cerca de `SPAWN_DUENDE`. Cada uno instancia exclusivamente en su empty. El zombie añade uno cada 5 minutos hasta 3 vivos; el lobo mantiene uno y reaparece 5 minutos después de morir. El `Goblin Spawner` y sus 10 duendes repartidos por el mapa siguen igual.
 
 Estados según sus animaciones:
-- **Zombie:** en reposo de pie (`zombie idle`); al ver al jugador grita (`zombie scream`) y lo persigue caminando (`zombie walk`, 1,1 m/s) o corriendo si está a más de 5 m (`zombie run`, 2,6 m/s). Alterna `zombie attack` y `zombie neck bite`. Muere con `zombie death`. Solo aparecen en `SPAWN_ZOMBIE`.
-- **Hombre Lobo:** en reposo `WolfIdle`; persigue con `wolfwalk` (1,8 m/s) o `WolfRun` (5 m/s), ataca con `WolfAttack`, si lo golpean por la espalda se gira con `wolf Right Turn 90` y muere con `wolfdied`. Nunca hay más de un lobo: aparece en `SPAWN_HOMBRE_LOBO`, lejos del inicio, y vuelve 5 minutos después de morir.
+- **Zombie:** en reposo de pie (`zombie idle`); al detectar al jugador en su radio grita (`zombie scream`) y lo persigue caminando (`zombie walk`, 1,1 m/s) o corriendo si está a más de 5 m (`zombie run`, 2,6 m/s). Al quedar en 100 de vida o menos, pasa a `zombie crawl` o `running crawl` y se mueve más despacio. Alterna `zombie attack` y `zombie neck bite`. Muere con `zombie death`.
+- **Hombre Lobo:** en reposo `WolfIdle`; persigue con `wolfwalk` (1,8 m/s) o `WolfRun` (5 m/s), ataca con `WolfAttack`, si lo golpean por la espalda se gira con `wolf Right Turn 90` y muere con `wolfdied`. Nunca hay más de un lobo.
 
-Prefabs: `Assets/02_Prefabs/Enemy/ForestZombie.prefab` y `ForestWerewolf.prefab`. Se generan (o actualizan) con el menú **Forest VR > Enemigos > Crear zombie y hombre lobo y colocarlos en la escena**, que con `ForestScene` abierta también crea `Zombie Spawner` y `Hombre Lobo Spawner` con sus puntos sobre suelo libre. Si en la escena hay objetos llamados `Spawn Zombie`, `Spawn Zombie (1)`... y `Spawn Wolf`, el menú usa esos puntos tal como están (los zombies salen al azar de cualquiera de ellos); si no, crea `SPAWN_ZOMBIE` y `SPAWN_HOMBRE_LOBO` sobre suelo libre. Los puntos se pueden mover libremente. El modelo Tripo de ambos conserva la rotación de ejes de Blender en `Armature`; el menú la pone a cero para que las animaciones de Mixamo no los tumben.
+Prefabs: `Assets/02_Prefabs/Enemy/ForestZombie.prefab` y `ForestWerewolf.prefab`. Los spawners y sus dos puntos están guardados en ForestScene. Puedes mover los empties; no se generan puntos alternativos. Al seleccionarlos, sus gizmos muestran el radio de detección y el cono de visión. El menú **Forest VR > Enemigos > Crear zombie y hombre lobo y colocarlos en la escena** reutiliza esos puntos y no crea otros si faltan.
 
 ## Preparación automática de ForestScene
 

@@ -13,6 +13,8 @@ namespace ForestVR
         public Transform spawnPointsRoot;
         [Tooltip("Puntos explicitos; pueden estar en cualquier parte de la jerarquia.")]
         public Transform[] spawnPoints = new Transform[0];
+        [Tooltip("Aparecer exactamente en el empty elegido, sin dispersarse alrededor.")]
+        public bool spawnExactlyAtPoints;
         GoblinActor current;
         Health playerHealth;
         Transform head;
@@ -67,10 +69,14 @@ namespace ForestVR
             if (candidates.Count == 0) return;
             var chosen = candidates[Random.Range(0, candidates.Count)];
             // Spread around the point so a new one does not appear inside one still standing there.
-            var offset = Random.insideUnitCircle * 1.5f;
-            var position = chosen.position + new Vector3(offset.x, 0, offset.y);
-            if (GroundSafety.TryGetSurface(position, out var surface) && Mathf.Abs(surface.y - chosen.position.y) < 1) position.y = surface.y + 0.05f;
-            else position = chosen.position;
+            var position = chosen.position;
+            if (!spawnExactlyAtPoints)
+            {
+                var offset = Random.insideUnitCircle * 1.5f;
+                position += new Vector3(offset.x, 0, offset.y);
+                if (GroundSafety.TryGetSurface(position, out var surface) && Mathf.Abs(surface.y - chosen.position.y) < 1) position.y = surface.y + 0.05f;
+                else position = chosen.position;
+            }
             var actor = Instantiate(goblinPrefab, position, chosen.rotation).GetComponent<GoblinActor>();
             actor.Initialize(settings, head, playerHealth);
             alive.Add(actor);

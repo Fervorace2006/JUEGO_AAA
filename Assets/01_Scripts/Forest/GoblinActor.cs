@@ -8,7 +8,7 @@ namespace ForestVR
     [RequireComponent(typeof(Health), typeof(CharacterController))]
     public sealed class GoblinActor : MonoBehaviour
     {
-        public enum State { Resting, GettingUp, Idle, Walking, Attacking, TurningFromHit, Dead }
+        public enum State { Resting, GettingUp, Idle, Walking, Attacking, TurningFromHit, Dead, Crawling }
         public GoblinSettings settings;
         [Tooltip("Animator whose hierarchy the clips animate. Empty = the first one under this object.")]
         public Animator animator;
@@ -26,7 +26,7 @@ namespace ForestVR
         AnimationClipPlayable playing, previous;
         AnimationClip currentClip, lastAttackClip;
         float blend = 1, fadeDuration;
-        float nextAttack, impactAt = -1, stateEnds, verticalSpeed, lastSeenAt, idleSince, pendingDamage;
+        float nextAttack, impactAt = -1, stateEnds, verticalSpeed, lastSeenAt, pendingDamage;
         Vector3 lastKnown;
         bool remembersTarget;
         int attackRepeats;
@@ -34,6 +34,7 @@ namespace ForestVR
         Transform hips;
         Vector3 hipsRest;
         public Health Health => health;
+        public AnimationClip CurrentAnimation => currentClip;
 
         public void Initialize(GoblinSettings config, Transform playerHead, Health playerHealth)
         {
@@ -46,8 +47,9 @@ namespace ForestVR
             {
                 animator.applyRootMotion = false;
                 animator.runtimeAnimatorController = null;
-                // Goblins sleep all over the map: skip writing bones for the ones nobody sees.
-                animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+                // The Animator is on Armature while the skinned renderer is on a sibling.
+                // Visibility culling treats it as hidden and freezes the bones even on screen.
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
                 MeasureStrike(animator.transform, settings.attack);
                 MeasureStrike(animator.transform, settings.slowAttack);
                 graph = PlayableGraph.Create("Goblin animations");
@@ -128,7 +130,6 @@ namespace ForestVR
             CurrentState = State.GettingUp;
             Play(settings.gettingUp != null ? settings.gettingUp : settings.idle, true, 0.35f);
             stateEnds = Time.time + (settings.gettingUp != null ? settings.gettingUp.length : 0.2f);
-            idleSince = stateEnds;
         }
         void Update()
         {
@@ -184,24 +185,30 @@ namespace ForestVR
             {
                 Face(lastKnown, settings.turnSpeed);
                 var before = transform.position;
-                bool running = settings.run != null && settings.runSpeed > 0 && Flat(lastKnown - transform.position).magnitude > settings.runDistance;
-                body.Move(Flat(lastKnown - transform.position).normalized * ((running ? settings.runSpeed : settings.speed) * Time.deltaTime));
-                if (CurrentState != State.Walking) movedAt = Time.time;
-                CurrentState = State.Walking;
+                bool wounded = settings.woundedWalk != null && settings.woundedThreshold > 0
+                    && health.Current <= health.Maximum * settings.woundedThreshold;
+                bool running = (wounded ? settings.woundedRun != null && settings.woundedRunSpeed > 0
+                    : settings.run != null && settings.runSpeed > 0)
+                    && Flat(lastKnown - transform.position).magnitude > settings.runDistance;
+                float moveSpeed = wounded ? (running ? settings.woundedRunSpeed : settings.woundedSpeed)
+                    : (running ? settings.runSpeed : settings.speed);
+                body.Move(Flat(lastKnown - transform.position).normalized * (moveSpeed * Time.deltaTime));
+                if (CurrentState != State.Walking && CurrentState != State.Crawling) movedAt = Time.time;
+                CurrentState = wounded ? State.Crawling : State.Walking;
                 // Only fall back to idle after being blocked for a moment, so the walk cycle does not restart every frame.
                 if ((transform.position - before).sqrMagnitude > 0.000001f) movedAt = Time.time;
-                Play(Time.time - movedAt < 0.25f ? (running ? settings.run : settings.walk) : settings.idle);
-                idleSince = Time.time;
+                var locomotion = wounded ? (running ? settings.woundedRun : settings.woundedWalk)
+                    : (running ? settings.run : settings.walk);
+                Play(Time.time - movedAt < 0.25f ? locomotion : settings.idle);
             }
             else
             {
                 Idle(); remembersTarget = false;
-                if (Time.time - idleSince >= settings.restAfterSeconds) Rest();
+                // Once awakened, this enemy stays alert; sleep is only its initial state.
             }
         }
         void Idle()
         {
-            if (CurrentState != State.Idle) idleSince = Time.time;
             CurrentState = State.Idle; Play(settings.idle);
         }
         void Attack()
@@ -229,7 +236,7 @@ namespace ForestVR
             bool behind = Vector3.Dot(transform.forward, Flat(source - transform.position).normalized) < -0.15f;
             lastKnown = source; lastSeenAt = Time.time; remembersTarget = true;
             if (CurrentState == State.Resting) { Wake(); return; }
-            if (behind && (CurrentState == State.Walking || CurrentState == State.Idle))
+            if (behind && (CurrentState == State.Walking || CurrentState == State.Crawling || CurrentState == State.Idle))
             {
                 impactAt = -1; CurrentState = State.TurningFromHit;
                 Play(settings.attackedFromBack != null ? settings.attackedFromBack : settings.idle, true);
@@ -309,7 +316,8 @@ namespace ForestVR
             }
         }
         bool IsLoopingClip(AnimationClip clip) =>
-            clip == settings.idle || clip == settings.walk || clip == settings.run || clip == settings.sleep || clip == settings.relaxing;
+            clip == settings.idle || clip == settings.walk || clip == settings.run || clip == settings.woundedWalk
+            || clip == settings.woundedRun || clip == settings.sleep || clip == settings.relaxing;
         void OnDestroy()
         {
             if (health != null) { health.Died -= Die; health.Damaged -= ReactToHit; }

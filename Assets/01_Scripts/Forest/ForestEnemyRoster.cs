@@ -2,23 +2,10 @@ using UnityEngine;
 
 namespace ForestVR
 {
-    // Data for ForestSceneSetup, loaded from Resources/ForestEnemyRoster: which enemies get a spawner next to the
-    // goblin's spawn point, and the trunk size of each tree mesh (the only part of a tree that blocks).
+    // Tree trunk sizes used by ForestSceneSetup. Enemy spawn points live in ForestScene itself.
     [CreateAssetMenu(menuName = "Forest VR/Enemy Roster")]
     public sealed class ForestEnemyRoster : ScriptableObject
     {
-        [System.Serializable]
-        public sealed class Enemy
-        {
-            public string label;
-            public GameObject prefab;
-            public GoblinSettings settings;
-            [Tooltip("Scene object the spawn point is placed next to.")]
-            public string anchorName = "SPAWN_DUENDE";
-            [Tooltip("Metres from the anchor: z = away from the player's start, x = to the right seen from there.")]
-            public Vector2 offset;
-        }
-
         [System.Serializable]
         public sealed class Trunk
         {
@@ -32,7 +19,6 @@ namespace ForestVR
             public float height = 3;
         }
 
-        public Enemy[] enemies = new Enemy[0];
         public Trunk[] trunks = new Trunk[0];
     }
 }

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d64114c612858044fa41ea677dcd7cee, type: 3}
   m_Name: Bow
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.WeaponSettings
-  damage: 55
+  damage: 100
   cooldown: 0.5
   projectileSpeed: 55
   gravity: 9.81

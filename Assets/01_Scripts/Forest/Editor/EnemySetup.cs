@@ -208,30 +208,19 @@ namespace ForestVR.EditorTools
             return result;
         }
 
-        // Adds (or updates) one spawner per new enemy, with its spawn point on open ground: the zombie at middle distance
-        // from the player's start, the werewolf far away as the final boss.
+        // Connects the spawners only to points placed by the level designer.
         public static void PlaceInScene(List<string> report)
         {
             var goblinSpawner = Object.FindObjectsByType<GoblinSpawner>(FindObjectsInactive.Include).FirstOrDefault(s => s.settings != null && s.settings.displayName == "Duende")
                 ?? Object.FindObjectsByType<GoblinSpawner>(FindObjectsInactive.Include).FirstOrDefault();
             if (goblinSpawner == null || goblinSpawner.player == null) { report.Add("No se encontro el Goblin Spawner con su jugador; no se colocaron enemigos."); return; }
             var player = goblinSpawner.player;
-            var floor = FindFloor();
-            if (floor == null && (UserPoints("spawn zombie").Length == 0 || UserPoints("spawn wolf", "spawn lobo", "spawn hombre lobo").Length == 0))
-            { report.Add("No se encontro el suelo (FloorWithLake) ni puntos Spawn Zombie / Spawn Wolf; no se colocaron enemigos."); return; }
-            Physics.SyncTransforms();
-            var avoid = new List<Vector3> { player.position };
-            if (goblinSpawner.spawnPoints != null) avoid.AddRange(goblinSpawner.spawnPoints.Where(p => p != null).Select(p => p.position));
-            if (goblinSpawner.spawnPointsRoot != null) foreach (Transform p in goblinSpawner.spawnPointsRoot) avoid.Add(p.position);
-
-            // Points placed by hand in the scene ("Spawn Zombie", "Spawn Zombie (1)", "Spawn Wolf"...) win over automatic ones.
             var zombiePoints = UserPoints("spawn zombie");
             var wolfPoints = UserPoints("spawn wolf", "spawn lobo", "spawn hombre lobo");
-            var zombiePoint = zombiePoints.Length > 0 ? zombiePoints[0].position : FindSpot(floor, player.position, 30, avoid, ZombieHeight);
-            avoid.Add(zombiePoint);
-            var wolfPoint = wolfPoints.Length > 0 ? wolfPoints[0].position : FindSpot(floor, player.position, 60, avoid, WolfHeight);
-            Place("Zombie Spawner", "SPAWN_ZOMBIE", ZombiePrefabPath, ZombieSettingsPath, zombiePoint, zombiePoints, player, goblinSpawner.transform.parent, report);
-            Place("Hombre Lobo Spawner", "SPAWN_HOMBRE_LOBO", WolfPrefabPath, WolfSettingsPath, wolfPoint, wolfPoints, player, goblinSpawner.transform.parent, report);
+            if (zombiePoints.Length == 0 || wolfPoints.Length == 0)
+            { report.Add("Faltan puntos Spawn Zombie o Spawn Wolf en la escena; no se crean puntos automaticos."); return; }
+            Place("Zombie Spawner", ZombiePrefabPath, ZombieSettingsPath, zombiePoints, player, goblinSpawner.transform.parent, report);
+            Place("Hombre Lobo Spawner", WolfPrefabPath, WolfSettingsPath, wolfPoints, player, goblinSpawner.transform.parent, report);
         }
 
         static Transform[] UserPoints(params string[] prefixes) =>
@@ -239,33 +228,9 @@ namespace ForestVR.EditorTools
                 .Where(t => prefixes.Any(p => t.name.ToLowerInvariant().StartsWith(p)) && t.GetComponent<GoblinSpawner>() == null)
                 .OrderBy(t => t.name).ToArray();
 
-        static Collider FindFloor()
-        {
-            var probe = Object.FindObjectsByType<Transform>(FindObjectsInactive.Exclude).FirstOrDefault(t => t.name == "FloorWithLake");
-            if (probe == null) return null;
-            return probe.GetComponentsInChildren<Collider>().OrderByDescending(c => c.bounds.size.x * c.bounds.size.z).FirstOrDefault();
-        }
-
-        static Vector3 FindSpot(Collider floor, Vector3 from, float wanted, List<Vector3> avoid, float height)
-        {
-            var area = floor.bounds; Vector3 best = from; float bestScore = float.MaxValue;
-            for (float x = area.min.x + 3; x <= area.max.x - 3; x += 2)
-            for (float z = area.min.z + 3; z <= area.max.z - 3; z += 2)
-            {
-                if (!Physics.Raycast(new Vector3(x, area.max.y + 30, z), Vector3.down, out var hit, area.size.y + 60, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) continue;
-                // The first thing seen from above must be the floor itself (not the lake, a tree, a rock or the house), fairly flat.
-                if (hit.collider != floor || Vector3.Angle(hit.normal, Vector3.up) > 20) continue;
-                if (Physics.CheckCapsule(hit.point + Vector3.up * .6f, hit.point + Vector3.up * height, .6f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) continue;
-                if (avoid.Any(a => Flat(a - hit.point).magnitude < 18)) continue;
-                float score = Mathf.Abs(Flat(hit.point - from).magnitude - wanted);
-                if (score < bestScore) { bestScore = score; best = hit.point; }
-            }
-            return best;
-        }
-
         static Vector3 Flat(Vector3 v) { v.y = 0; return v; }
 
-        static void Place(string spawnerName, string pointName, string prefabPath, string settingsPath, Vector3 position, Transform[] userPoints, Transform player, Transform parent, List<string> report)
+        static void Place(string spawnerName, string prefabPath, string settingsPath, Transform[] userPoints, Transform player, Transform parent, List<string> report)
         {
             var existing = Object.FindObjectsByType<GoblinSpawner>(FindObjectsInactive.Include).FirstOrDefault(s => s.name == spawnerName);
             var spawner = existing != null ? existing : new GameObject(spawnerName).AddComponent<GoblinSpawner>();
@@ -277,40 +242,17 @@ namespace ForestVR.EditorTools
             spawner.goblinPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             spawner.settings = AssetDatabase.LoadAssetAtPath<GoblinSettings>(settingsPath);
             spawner.player = player;
-            if (userPoints.Length > 0)
+            spawner.spawnExactlyAtPoints = true;
+            spawner.spawnPoints = userPoints; spawner.spawnPointsRoot = null;
+            foreach (var p in userPoints)
             {
-                // Hand-placed points are used where they are; an automatic point from an earlier run is removed.
-                var automatic = spawner.transform.Find(pointName);
-                if (automatic != null) Undo.DestroyObjectImmediate(automatic.gameObject);
-                spawner.spawnPoints = userPoints; spawner.spawnPointsRoot = null;
-                foreach (var p in userPoints)
-                {
-                    var g = p.GetComponent<GoblinSpawnGizmos>();
-                    if (g == null) g = Undo.AddComponent<GoblinSpawnGizmos>(p.gameObject);
-                    g.settings = spawner.settings;
-                    EditorUtility.SetDirty(p.gameObject);
-                    report.Add($"{spawnerName}: usa tu punto '{p.name}' en {p.position}");
-                }
-                EditorUtility.SetDirty(spawner);
-                return;
+                var g = p.GetComponent<GoblinSpawnGizmos>();
+                if (g == null) g = Undo.AddComponent<GoblinSpawnGizmos>(p.gameObject);
+                g.settings = spawner.settings;
+                EditorUtility.SetDirty(p.gameObject);
+                report.Add($"{spawnerName}: usa tu punto '{p.name}' en {p.position}");
             }
-            var point = spawner.transform.Find(pointName);
-            if (point == null)
-            {
-                point = new GameObject(pointName).transform;
-                point.SetParent(spawner.transform, false);
-                point.position = position + Vector3.up * .05f;
-                // Facing the player's start, so it turns toward whoever approaches from there.
-                var look = Flat(player.position - position);
-                if (look.sqrMagnitude > .01f) point.rotation = Quaternion.LookRotation(look);
-            }
-            spawner.spawnPoints = new[] { point };
-            spawner.spawnPointsRoot = null;
-            var gizmos = point.GetComponent<GoblinSpawnGizmos>();
-            if (gizmos == null) gizmos = point.gameObject.AddComponent<GoblinSpawnGizmos>();
-            gizmos.settings = spawner.settings;
             EditorUtility.SetDirty(spawner);
-            report.Add($"{spawnerName}: punto {pointName} en {point.position} ({Flat(point.position - player.position).magnitude:0} m del inicio del jugador)");
         }
     }
 }

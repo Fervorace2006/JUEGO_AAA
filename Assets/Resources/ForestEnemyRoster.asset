@@ -12,17 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5a1c2e7b9d0f4a3c8e6b1d2f4a7c9e01, type: 3}
   m_Name: ForestEnemyRoster
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.ForestEnemyRoster
-  enemies:
-  - label: Zombie
-    prefab: {fileID: 4904015820904710043, guid: 17bfc0b512aa7c34cbf1cbfcd107db52, type: 3}
-    settings: {fileID: 11400000, guid: 80eb54d9c58ef704db1a9cf1c8348410, type: 2}
-    anchorName: SPAWN_DUENDE
-    offset: {x: 4, y: 6}
-  - label: Hombre Lobo
-    prefab: {fileID: 4206055404156222246, guid: 22cd2a99e63f902449b4da82765011fd, type: 3}
-    settings: {fileID: 11400000, guid: c557ec2c618192942a0beddd72330bb8, type: 2}
-    anchorName: SPAWN_DUENDE
-    offset: {x: -5, y: 9}
   trunks:
   - meshName: PP_Tree_02
     center: {x: -0.084, y: -0.276}

@@ -72,7 +72,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4be26a7940e4274ab5dda3bf03f720c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.Health
-  maximum: 100
+  maximum: 200
   onDeath:
     m_PersistentCalls:
       m_Calls: []

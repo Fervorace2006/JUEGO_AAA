@@ -15,9 +15,9 @@ MonoBehaviour:
   health: 200
   damage: 20
   speed: 1.1
-  detectionRadius: 16
-  wakeRadius: 10
-  visionAngle: 120
+  detectionRadius: 12
+  wakeRadius: 7
+  visionAngle: 105
   memorySeconds: 6
   turnSpeed: 150
   restAfterSeconds: 15
@@ -45,6 +45,11 @@ MonoBehaviour:
   run: {fileID: -203655887218126122, guid: f8a977929b7d9bc43a7007c0fd4515fb, type: 3}
   runSpeed: 2.6
   runDistance: 5
+  woundedThreshold: 0.5
+  woundedWalk: {fileID: -203655887218126122, guid: 4f6a4e1210565e246bf6c93d43eec0c3, type: 3}
+  woundedRun: {fileID: -203655887218126122, guid: 2c7565118c118424ea59eb03e6fed3bf, type: 3}
+  woundedSpeed: 0.7
+  woundedRunSpeed: 1.4
   lockHipsInPlace: 1
   displayName: Zombie
   healthBarColor: {r: 0.16, g: 0.85, b: 0.25, a: 1}

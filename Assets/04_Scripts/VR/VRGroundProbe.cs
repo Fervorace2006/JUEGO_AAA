@@ -28,8 +28,6 @@ namespace JuegoAAA.VR
 
         XROrigin origin;
         CharacterController body;
-        Vector3 safePosition;
-        bool hasSafePosition;
         Collider floor;
 
         void Start()
@@ -70,8 +68,6 @@ namespace JuegoAAA.VR
                         feet + Vector3.up * (height - body.radius), body.radius, groundLayers,
                         QueryTriggerInteraction.Ignore)) continue;
                     PlaceAt(feet);
-                    safePosition = feet;
-                    hasSafePosition = true;
                     return;
                 }
             }
@@ -157,22 +153,16 @@ namespace JuegoAAA.VR
             GroundSlope = HasGround ? Vector3.Angle(up, hit.normal) : 0f;
             IsGrounded = body.isGrounded || (HasGround && GroundDistance <= groundedTolerance
                 && GroundSlope <= body.slopeLimit);
-            if (configurePlayer && hasSafePosition)
+            if (configurePlayer && floor != null)
             {
                 var floorRayStart = new Vector3(feet.x, floor.bounds.max.y + 2f, feet.z);
                 bool overFloor = floor.Raycast(new Ray(floorRayStart, Vector3.down),
                     out var floorHit, floor.bounds.size.y + 4f);
-                // Keep locomotion inside the playable ground and recover if a teleport or
-                // tracking change places the player below the terrain.
-                // A small ascent can put the rig origin just below the sampled slope.
-                // Recover only after genuine penetration, not at every uneven triangle.
+                // If the player penetrates the terrain, lift them at their current X/Z.
+                // A missing floor hit must never teleport the rig back to an old position.
                 float recoveryDepth = locomotionSettings != null ? locomotionSettings.recoveryDepth : 0.75f;
-                if (!overFloor || feet.y < floorHit.point.y - recoveryDepth)
-                {
-                    PlaceAt(safePosition);
-                }
-                else if (IsGrounded && HasGround && GroundSlope <= body.slopeLimit)
-                    safePosition = feet;
+                if (overFloor && feet.y < floorHit.point.y - recoveryDepth)
+                    PlaceAt(floorHit.point + Vector3.up * 0.04f);
             }
         }
 

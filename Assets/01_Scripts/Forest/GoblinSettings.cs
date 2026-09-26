@@ -39,6 +39,12 @@ namespace ForestVR
         public AnimationClip run;
         [Min(0)] public float runSpeed = 0;
         [Min(0)] public float runDistance = 4;
+        [Header("Herido (opcional)")]
+        [Tooltip("Animaciones de desplazamiento usadas al bajar de este porcentaje de vida. Si no hay clip, conserva caminar y correr.")]
+        [Range(0, 1)] public float woundedThreshold;
+        public AnimationClip woundedWalk, woundedRun;
+        [Min(0)] public float woundedSpeed = 0.8f;
+        [Min(0)] public float woundedRunSpeed = 1.5f;
         [Tooltip("For clips that move the hips forward instead of animating in place: keeps the body over the character.")]
         public bool lockHipsInPlace;
         [Header("Nombre y barra de vida sobre la cabeza")]

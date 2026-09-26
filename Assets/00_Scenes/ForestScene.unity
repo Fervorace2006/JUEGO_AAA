@@ -338,8 +338,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 77998013}
+  - component: {fileID: 77998014}
   m_Layer: 0
-  m_Name: 'Spawn Zombie '
+  m_Name: Spawn Zombie
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -353,13 +354,26 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 77998012}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -183.4, y: 0, z: -149.4}
+  m_LocalRotation: {x: 0, y: -0.843591, z: 0, w: 0.5369863}
+  m_LocalPosition: {x: 8.5, y: 1.9494686, z: -7.000003}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &77998014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 77998012}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79163ed1d0799d841bb88fd1acd8114a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ForestVR.GoblinSpawnGizmos
+  settings: {fileID: 11400000, guid: 80eb54d9c58ef704db1a9cf1c8348410, type: 2}
 --- !u!1001 &113886818
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1713,37 +1727,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 8a24d96e44f08cd42bc5533b0f48d23f, type: 3}
   m_PrefabInstance: {fileID: 357636882}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &374154276
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 374154277}
-  m_Layer: 0
-  m_Name: Spawn Zombie  (1)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &374154277
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 374154276}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 10.34, y: 0, z: 9.2}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &383612706
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2927,37 +2910,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 8a24d96e44f08cd42bc5533b0f48d23f, type: 3}
   m_PrefabInstance: {fileID: 614221527}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &633184744
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 633184745}
-  m_Layer: 0
-  m_Name: Spawn Wolf (1)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &633184745
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 633184744}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.76, y: 2.5, z: -10.12}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &642157423
 GameObject:
   m_ObjectHideFlags: 0
@@ -4658,6 +4610,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 373c490b35731d046bf900c2039e0668, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.PlayerWeaponLoadout
+  bowPrefab: {fileID: 0}
+  axePrefab: {fileID: 0}
+  revolverPrefab: {fileID: 0}
 --- !u!114 &931425375
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5311,6 +5266,57 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 762aa16677480b9499b91fa14a30f6c3, type: 3}
   m_PrefabInstance: {fileID: 1095116000}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1123431115
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1123431117}
+  - component: {fileID: 1123431116}
+  m_Layer: 0
+  m_Name: Hombre Lobo Spawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1123431116
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1123431115}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c957e9921aeaadf43bd16a0ce54252ad, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ForestVR.GoblinSpawner
+  goblinPrefab: {fileID: 4206055404156222246, guid: 22cd2a99e63f902449b4da82765011fd, type: 3}
+  settings: {fileID: 11400000, guid: c557ec2c618192942a0beddd72330bb8, type: 2}
+  player: {fileID: 931425373}
+  spawnPointsRoot: {fileID: 0}
+  spawnPoints:
+  - {fileID: 1554071314}
+  spawnExactlyAtPoints: 1
+--- !u!4 &1123431117
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1123431115}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1136051829
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6711,6 +6717,57 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 36606b8e640990d44b977ba10e9e5ee3, type: 3}
   m_PrefabInstance: {fileID: 1443864354}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1456944219
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1456944221}
+  - component: {fileID: 1456944220}
+  m_Layer: 0
+  m_Name: Zombie Spawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1456944220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1456944219}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c957e9921aeaadf43bd16a0ce54252ad, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ForestVR.GoblinSpawner
+  goblinPrefab: {fileID: 4904015820904710043, guid: 17bfc0b512aa7c34cbf1cbfcd107db52, type: 3}
+  settings: {fileID: 11400000, guid: 80eb54d9c58ef704db1a9cf1c8348410, type: 2}
+  player: {fileID: 931425373}
+  spawnPointsRoot: {fileID: 0}
+  spawnPoints:
+  - {fileID: 77998013}
+  spawnExactlyAtPoints: 1
+--- !u!4 &1456944221
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1456944219}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1485015522
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6987,6 +7044,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1554071314}
+  - component: {fileID: 1554071315}
   m_Layer: 0
   m_Name: Spawn Wolf
   m_TagString: Untagged
@@ -7002,13 +7060,26 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1554071313}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 62.66, y: 0, z: 33.09525}
+  m_LocalRotation: {x: 0, y: 0.5912191, z: 0, w: 0.80651104}
+  m_LocalPosition: {x: -5.0000024, y: 1.376503, z: -12.000005}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1554071315
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1554071313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79163ed1d0799d841bb88fd1acd8114a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ForestVR.GoblinSpawnGizmos
+  settings: {fileID: 11400000, guid: c557ec2c618192942a0beddd72330bb8, type: 2}
 --- !u!1001 &1558296349
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -9379,6 +9450,7 @@ MonoBehaviour:
   spawnPointsRoot: {fileID: 880000000000002}
   spawnPoints:
   - {fileID: 642157424}
+  spawnExactlyAtPoints: 0
 --- !u!1 &880000000000021
 GameObject:
   m_ObjectHideFlags: 0
@@ -9459,6 +9531,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 373c490b35731d046bf900c2039e0668, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.PlayerWeaponLoadout
+  bowPrefab: {fileID: 0}
+  axePrefab: {fileID: 0}
+  revolverPrefab: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -9481,6 +9556,6 @@ SceneRoots:
   - {fileID: 2066349889}
   - {fileID: 1592041543}
   - {fileID: 1554071314}
-  - {fileID: 633184745}
   - {fileID: 77998013}
-  - {fileID: 374154277}
+  - {fileID: 1456944221}
+  - {fileID: 1123431117}

@@ -23,20 +23,22 @@ namespace ForestVR
             // Ignore teleport discontinuities and walking with a motionless hand.
             if (speed >= grip.settings.minimumSwingSpeed && movement.magnitude < 1.5f)
             {
-                var hits = Physics.SphereCastAll(previous, grip.settings.hitRadius, movement.normalized,
-                    movement.magnitude, Physics.AllLayers, QueryTriggerInteraction.Ignore);
-                Array.Sort(hits, (a,b) => a.distance.CompareTo(b.distance));
+                // A cast misses colliders already touching the edge at the start of a swing.
+                // Overlap the whole path of the blade point, including both ends.
+                var hits = Physics.OverlapCapsule(previous, now, grip.settings.hitRadius,
+                    Physics.AllLayers, QueryTriggerInteraction.Ignore);
+                Array.Sort(hits, (a,b) =>
+                    (a.ClosestPoint(previous) - previous).sqrMagnitude.CompareTo(
+                        (b.ClosestPoint(previous) - previous).sqrMagnitude));
                 foreach (var hit in hits)
                 {
                     if (hit.transform.IsChildOf(transform) || hit.transform.IsChildOf(grip.Owner.transform)) continue;
-                    var health = hit.collider.GetComponentInParent<Health>();
+                    var health = hit.GetComponentInParent<Health>();
                     if (health != null && !health.IsDead && Vector3.Distance(now, grip.SourcePosition + Vector3.up) <= grip.settings.maximumMeleeReach
                         && (!nextHits.TryGetValue(health, out float until) || Time.time >= until))
                     {
                         nextHits[health] = Time.time + grip.settings.cooldown;
-                        // Stronger swings hit harder: half damage at the minimum speed, double at 6 m/s.
-                        float force = Mathf.Clamp(speed / 3f, 0.5f, 2f);
-                        health.TakeHit(grip.settings.damage * force, grip.SourcePosition);
+                        health.TakeHit(grip.settings.damage, grip.SourcePosition);
                     }
                     break; // Walls block the blade sweep before an enemy behind them.
                 }

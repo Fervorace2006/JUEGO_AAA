@@ -94,10 +94,10 @@ namespace ForestVR.Editor
             yield return null;
             right.StartManualInteraction((IXRSelectInteractable)gunGrip.Grab);
             for(int i=0;i<4;i++) yield return null;
-            var gunTarget=Target(gun.muzzle.position+gun.muzzle.forward*3); Physics.SyncTransforms();
+            var gunTarget=Target(gun.muzzle.position+gun.muzzle.forward*3); gunTarget.Initialize(200); Physics.SyncTransforms();
             Check(gun.TryFire(),"Held revolver fires"); Check(!gun.TryFire(),"Revolver cooldown blocks repeated activation");
             until=Time.time+1; while(Time.time<until&&!gunTarget.IsDead) yield return null;
-            Check(gunTarget.IsDead,"Bullet sweep deals 100 damage");
+            Check(Mathf.Abs(gunTarget.Current-50)<.1f,"Bullet sweep deals 150 damage");
             right.EndManualInteraction(); yield return null; Check(!gun.TryFire(),"Unheld revolver cannot fire");
             UnityEngine.Object.Destroy(gun.gameObject); UnityEngine.Object.Destroy(gunTarget.gameObject);
 
@@ -119,14 +119,16 @@ namespace ForestVR.Editor
             var bowTarget=Target(bow.restingNock.position+bow.transform.forward*4); Physics.SyncTransforms();
             right.EndManualInteraction();
             until=Time.time+1; while(Time.time<until&&bowTarget.Current==100) yield return null;
-            Check(Mathf.Abs(bowTarget.Current-45)<.1f,"Released arrow deals 55 damage at full draw");
+            Check(bowTarget.IsDead,"Released arrow deals 100 damage at full draw");
             Check(bow.DrawDistance==0,"String resets after release");
             until=Time.time+.6f; while(Time.time<until) yield return null;
+            UnityEngine.Object.Destroy(bowTarget.gameObject); yield return null;
+            var noDrawTarget=Target(bow.restingNock.position+bow.transform.forward*4); Physics.SyncTransforms();
             right.transform.position=bow.restingNock.position; right.StartManualInteraction((IXRSelectInteractable)bow.stringGrip);
             yield return null; right.EndManualInteraction();
             until=Time.time+.3f; while(Time.time<until) yield return null;
-            Check(Mathf.Abs(bowTarget.Current-45)<.1f,"Releasing without draw does not shoot");
-            left.EndManualInteraction(); UnityEngine.Object.Destroy(bow.gameObject); UnityEngine.Object.Destroy(bowTarget.gameObject);
+            Check(noDrawTarget.Current==100,"Releasing without draw does not shoot");
+            left.EndManualInteraction(); UnityEngine.Object.Destroy(bow.gameObject); UnityEngine.Object.Destroy(noDrawTarget.gameObject);
 
             player.transform.position=new Vector3(30,0,0); right.transform.position=new Vector3(30,1,0); right.transform.rotation=Quaternion.identity;
             var axe=UnityEngine.Object.Instantiate(Load<GameObject>("Assets/02_Prefabs/Weapons/VRAxe.prefab")).GetComponent<VRAxe>();
@@ -139,10 +141,14 @@ namespace ForestVR.Editor
             Check(axeTarget.Current==100,"Stationary axe deals no damage");
             until=Time.time+.25f; while(Time.time<until) { right.transform.position+=Vector3.forward*(2.5f*Time.deltaTime); yield return null; }
             float afterSwing=axeTarget.Current;
-            Check(afterSwing>=75 && afterSwing<=87.5f,"Axe swing deals 12.5-25 damage once (scales with swing speed); health="+afterSwing);
+            Check(Mathf.Abs(afterSwing-60)<.1f,"Axe swing deals 40 damage once; health="+afterSwing);
             until=Time.time+.8f; while(Time.time<until) yield return null;
             Check(axeTarget.Current==afterSwing,"Holding axe against target does not repeat damage");
-            right.EndManualInteraction(); UnityEngine.Object.Destroy(axe.gameObject); UnityEngine.Object.Destroy(axeTarget.gameObject);
+            UnityEngine.Object.Destroy(axeTarget.gameObject); yield return null;
+            var edgeTarget=Target(axe.blade.position); Physics.SyncTransforms();
+            until=Time.time+.12f; while(Time.time<until) { right.transform.position+=Vector3.forward*(2f*Time.deltaTime); yield return null; }
+            Check(Mathf.Abs(edgeTarget.Current-60)<.1f,"Blade point already touching an enemy deals 40 damage when swung; health="+edgeTarget.Current+" blade="+axe.blade.position);
+            right.EndManualInteraction(); UnityEngine.Object.Destroy(axe.gameObject); UnityEngine.Object.Destroy(edgeTarget.gameObject);
 
             player.transform.position=new Vector3(40,0,0);
             var wall=GameObject.CreatePrimitive(PrimitiveType.Cube); wall.transform.position=new Vector3(40,1,2); wall.transform.localScale=new Vector3(2,2,.05f);
