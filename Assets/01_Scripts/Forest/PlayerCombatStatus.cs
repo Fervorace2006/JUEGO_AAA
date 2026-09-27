@@ -9,6 +9,7 @@ namespace ForestVR
         Health health;
         VRWorldLabel hint;
         HudHealthBar bar;
+        BloodScreen blood;
         InputAction recover;
         public void Initialize(Health playerHealth, Transform head)
         {
@@ -17,6 +18,7 @@ namespace ForestVR
             hint = VRWorldLabel.Create(head, "Player Health", new Vector3(0, .18f, .85f));
             // Lower left of the view, out of the way of the aim point.
             bar = HudHealthBar.Create(head, new Vector3(-.30f, -.20f, .45f), new Vector2(.14f, .012f));
+            blood = BloodScreen.Create(head, health);
             health.onHealthChanged.AddListener(Refresh);
             recover = new InputAction("Recover player health", InputActionType.Button);
             recover.AddBinding("<XRController>{RightHand}/primaryButton");
@@ -62,6 +64,7 @@ namespace ForestVR
             recover?.Dispose();
             if (hint != null) Destroy(hint.gameObject);
             if (bar != null) Destroy(bar.gameObject);
+            if (blood != null) Destroy(blood.gameObject);
         }
     }
 }

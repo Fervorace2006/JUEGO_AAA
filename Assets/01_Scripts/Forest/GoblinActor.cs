@@ -183,7 +183,9 @@ namespace ForestVR
             }
             if (remembersTarget && Time.time - lastSeenAt <= settings.memorySeconds && Flat(lastKnown - transform.position).magnitude > 0.5f)
             {
-                Face(lastKnown, settings.turnSpeed);
+                // Head for the player, but around trees, rocks and walls instead of pushing into them.
+                var heading = Steer(Flat(lastKnown - transform.position).normalized);
+                Face(transform.position + heading, settings.turnSpeed);
                 var before = transform.position;
                 bool wounded = settings.woundedWalk != null && settings.woundedThreshold > 0
                     && health.Current <= health.Maximum * settings.woundedThreshold;
@@ -192,7 +194,7 @@ namespace ForestVR
                     && Flat(lastKnown - transform.position).magnitude > settings.runDistance;
                 float moveSpeed = wounded ? (running ? settings.woundedRunSpeed : settings.woundedSpeed)
                     : (running ? settings.runSpeed : settings.speed);
-                body.Move(Flat(lastKnown - transform.position).normalized * (moveSpeed * Time.deltaTime));
+                body.Move(heading * (moveSpeed * Time.deltaTime));
                 if (CurrentState != State.Walking && CurrentState != State.Crawling) movedAt = Time.time;
                 CurrentState = wounded ? State.Crawling : State.Walking;
                 // Only fall back to idle after being blocked for a moment, so the walk cycle does not restart every frame.
@@ -206,6 +208,38 @@ namespace ForestVR
                 Idle(); remembersTarget = false;
                 // Once awakened, this enemy stays alert; sleep is only its initial state.
             }
+        }
+        static readonly float[] SteerAngles = { 0, 35, -35, 70, -70, 105, -105 };
+        readonly RaycastHit[] steerHits = new RaycastHit[8];
+        float avoidSide = 1;
+        // First direction near the desired one where the body fits for the next ~0.9 m. Keeps turning to the same side
+        // while going around an obstacle so it does not hesitate between left and right.
+        Vector3 Steer(Vector3 desired)
+        {
+            if (desired.sqrMagnitude < 0.001f) return desired;
+            float radius = body.radius * 0.9f;
+            var bottom = transform.position + Vector3.up * (body.stepOffset + radius);
+            var top = transform.position + Vector3.up * Mathf.Max(body.height - radius, body.stepOffset + radius);
+            foreach (float angle in SteerAngles)
+            {
+                var direction = Quaternion.Euler(0, angle * avoidSide, 0) * desired;
+                if (!Blocked(bottom, top, radius, direction)) { if (angle != 0) avoidSide = Mathf.Sign(angle * avoidSide); return direction; }
+            }
+            return desired;
+        }
+        bool Blocked(Vector3 bottom, Vector3 top, float radius, Vector3 direction)
+        {
+            int count = Physics.CapsuleCastNonAlloc(bottom, top, radius, direction, steerHits, 0.9f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                var hit = steerHits[i];
+                if (hit.transform.IsChildOf(transform) || (targetHealth != null && hit.transform.IsChildOf(targetHealth.transform))) continue;
+                // Walkable ground and gentle slopes do not block.
+                if (GroundSafety.IsGround(hit.collider) || Vector3.Angle(hit.normal, Vector3.up) < body.slopeLimit) continue;
+                if (hit.collider.GetComponentInParent<GoblinActor>() != null) continue;
+                return true;
+            }
+            return false;
         }
         void Idle()
         {

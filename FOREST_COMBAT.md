@@ -1,5 +1,15 @@
 # Armas y duende en ForestScene
 
+## Menú de inicio
+
+`Assets/00_Scenes/MainMenu.unity` es la primera escena en Build Settings, seguida de `ForestScene`. Se crea sola la primera vez que Unity compila; para regenerarla usa el menú **Shadowwood > Crear o actualizar menu de inicio**. Contiene el rig VR, un suelo invisible y `ShadowwoodMenu`, que construye al empezar un panel de 3,4 m a 2,6 m delante del jugador:
+
+- Fondo: `Assets/05_UI/Textures/ShadowwoodMenu.png` (el arte con el título SHADOWWOOD).
+- Tipografía: Cinzel Decorative (botones y títulos) y Cinzel (textos), romanas en mayúsculas como el título; licencia libre OFL en `Assets/05_UI/Fonts/OFL.txt`.
+- Terror: aparece desde negro, el farol del arte parpadea, la niebla se desplaza y cada 8 a 15 s el farol se apaga a tirones y la vista se tiñe de rojo con un latido. De fondo suena un zumbido grave con viento, generado por código. Al señalar un botón, el texto se vuelve rojo sangre, crece, tiembla y se subraya.
+- En el editor, Play empieza siempre desde el menú aunque tengas abierta ForestScene (`EditorSceneManager.playModeStartScene`). Para probar el bosque directamente, desmarca **Shadowwood > Empezar Play siempre desde el menu**. En el simulador, **Enter** equivale a JUGAR y **Esc** cierra los controles, porque el simulador desactiva el ratón sobre la UI.
+- Botones: **JUGAR** (funde a negro y carga ForestScene), **CONTROLES** (panel con los controles) y **SALIR**. Se usan con el rayo de los mandos o, en el simulador, con el ratón.
+
 ## Controles y equipo
 
 Las tres armas son objetos guardados en `ForestScene` sobre la mesa `MESA`: el arco atras, el hacha y el revolver delante. Acercate a la mesa y agarra un arma con **Grip** (el agarre lateral del control). Al soltarla cae sobre la mesa o el suelo; ya no reaparece junto a la camara.
@@ -78,6 +88,14 @@ En los puntos del spawner hay **un solo duende vivo** y una espera de **20 minut
 Selecciona `SPAWN_DUENDE` con **Gizmos** activado para ver el círculo de despertar y el sector frontal. Selecciona el duende durante Play para ver también el alcance de ataque. Los valores y clips se editan en `Assets/SO_/ForestGoblinSettings.asset`.
 
 La persecución utiliza CharacterController y colisiones; no incluye búsqueda de caminos alrededor de árboles o paredes. Para esa navegación hará falta preparar el NavMesh del mapa.
+
+## Manchas de sangre al recibir daño
+
+Cada golpe de un enemigo mancha de rojo el borde de la vista (`BloodScreen`, hija de la cámara, creada por `PlayerCombatStatus`). El centro queda siempre despejado: solo se pierde algo de visión periférica. Cada golpe añade intensidad y una o dos salpicaduras del lado del que vino el golpe, con un breve pulso. Tras 2,5 s sin recibir daño, las manchas se desvanecen en 2,5 s. Recuperar la vida (A / X o F8) las borra. Las texturas se generan por código y la barra de vida se dibuja por encima.
+
+## Árboles y obstáculos
+
+Los modelos de la naturaleza importan un collider de malla de todo el modelo; en los árboles eso incluía la copa. Al empezar, `ForestColliders` mide el tronco de cada árbol con rayos contra su propia malla y le pone una cápsula sólida (hasta 5 m de alto), desactivando el collider de la copa: el jugador y las armas ya no chocan con las hojas y los disparos no se quedan en el follaje. Flores, hierba, setas y piedrecitas dejan de bloquear. Rocas, puente y casa conservan su collider. Los duendes esquivan árboles, rocas y paredes: si el camino directo está bloqueado prueban direcciones a ±35°, ±70° y ±105° y rodean el obstáculo por el mismo lado.
 
 ## Nada cae infinitamente
 
