@@ -51,5 +51,26 @@ namespace ForestVR
         public string displayName = "Duende";
         public Color healthBarColor = new Color(.16f, .85f, .25f);
         [Min(0.1f)] public float nameplateScale = 1;
+        [Header("Sonidos")]
+        [Tooltip("Loops while it sleeps or rests (snoring, breathing).")]
+        public AudioClip sleepLoop;
+        [Range(0, 1)] public float sleepVolume = .6f;
+        [Tooltip("Once, when it wakes up and goes for the player.")]
+        public AudioClip alertSound;
+        [Tooltip("Now and then while it chases the player.")]
+        public AudioClip[] chaseSounds = new AudioClip[0];
+        public Vector2 chaseSoundInterval = new Vector2(5, 10);
+        public AudioClip attackSound;
+        [Range(0, 1)] public float attackSoundChance = .6f;
+        [Tooltip("When one of its blows hurts the player.")]
+        public AudioClip hitPlayerSound;
+        [Range(0, 1)] public float hitPlayerSoundChance = .5f;
+        public AudioClip deathSound;
+        [Tooltip("Pitch multiplier for the death sound (below 1 sounds deeper).")]
+        [Min(0.1f)] public float deathPitch = 1;
+        [Range(0, 1)] public float voiceVolume = 1;
+        [Tooltip("Random pitch range: each enemy gets its own voice.")]
+        public Vector2 voicePitch = new Vector2(.95f, 1.05f);
+        [Min(1)] public float hearingDistance = 25;
     }
 }

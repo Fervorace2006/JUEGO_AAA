@@ -75,6 +75,8 @@ namespace ForestVR
             if (player != null) player.Died += OnPlayerDied;
             Night.Capture();
             StartCoroutine(TrackEnemies());
+            if (GameAudio.Get != null) GameAudio.Music(GameAudio.Get.forestMusic, 5);
+            StartCoroutine(Whispers());
             yield return Story();
         }
 
@@ -128,6 +130,7 @@ namespace ForestVR
             Chapter = 3;
             hud.SetMarker(null);
             hud.SetObjective("");
+            Whisper(3);
             yield return Say(
                 "La última página tiembla en tus manos: «Cuando la sangre del bosque se derrama, los muertos despiertan».",
                 "Detrás de ti, la tierra se abre.");
@@ -148,6 +151,7 @@ namespace ForestVR
                 "Otra página, escrita con una letra que ya no parece humana:",
                 "«Si lees esto, ya no soy un hombre. Mateo está a salvo en el sótano de la cabaña. Mátame antes de que lo recuerde.» — E. Varga");
             Night.BloodMoon(8);
+            if (GameAudio.Get != null) GameAudio.Music(GameAudio.Get.bossMusic, 4);
             yield return hud.ChapterCard("Capítulo IV", "Luna de sangre");
             SetSpawner(Werewolf, true, 99999);
             yield return KillObjective(Werewolf, 1, "Acaba con el Hombre Lobo", 3.2f, null);
@@ -159,6 +163,7 @@ namespace ForestVR
             hud.SetObjective("");
             if (spawners.TryGetValue(Goblin, out var goblins)) goblins.respawnOverride = 99999;
             Night.Dawn(10);
+            GameAudio.Music(null, 8);
             StartCoroutine(DeadReturnToEarth());
             yield return Say(
                 "El aullido se apaga. La luna se esconde entre los árboles y los muertos vuelven a la tierra.",
@@ -210,6 +215,30 @@ namespace ForestVR
             if (deathLineSaid) return;
             deathLineSaid = true;
             StartCoroutine(Aside("Todavía no. Mateo te necesita. Levántate."));
+        }
+
+        // ---------- Ambience ----------
+
+        // Whispers from somewhere in the dark around the player, now and then (never during the dawn).
+        IEnumerator Whispers()
+        {
+            var audio = GameAudio.Get;
+            if (audio == null || audio.whispers == null) yield break;
+            while (Chapter < 5)
+            {
+                yield return new WaitForSeconds(Random.Range(audio.whisperInterval.x, audio.whisperInterval.y));
+                if (Chapter < 5) Whisper(Random.Range(4f, 8f));
+            }
+        }
+
+        // A whisper at the given distance: behind the player when close, anywhere around when far.
+        void Whisper(float distance)
+        {
+            var audio = GameAudio.Get;
+            if (audio == null || head == null) return;
+            var back = -Vector3.ProjectOnPlane(head.forward, Vector3.up).normalized;
+            var direction = Quaternion.Euler(0, Random.Range(-70f, 70f), 0) * back;
+            GameAudio.PlayAt(audio.whispers, head.position + direction * distance, .9f, Random.Range(.9f, 1.05f), 20);
         }
 
         // ---------- Enemies ----------

@@ -19,6 +19,7 @@ namespace ForestVR
             // Lower left of the view, out of the way of the aim point.
             bar = HudHealthBar.Create(head, new Vector3(-.30f, -.20f, .45f), new Vector2(.14f, .012f));
             blood = BloodScreen.Create(head, health);
+            PlayerSounds.Create(health, head);
             health.onHealthChanged.AddListener(Refresh);
             recover = new InputAction("Recover player health", InputActionType.Button);
             recover.AddBinding("<XRController>{RightHand}/primaryButton");

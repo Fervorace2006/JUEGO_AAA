@@ -42,3 +42,18 @@ MonoBehaviour:
   gettingUp: {fileID: 7400000, guid: da45024b33781a84aa5ad78892d80df2, type: 2}
   slowAttack: {fileID: 7400000, guid: db1df1e1cc338aa41b24880e50c058d6, type: 2}
   attackedFromBack: {fileID: 7400000, guid: 2c000032197197e4f847e1a81637e555, type: 2}
+  sleepLoop: {fileID: 8300000, guid: d2f89cf0ce9f854418e697be31859276, type: 3}
+  sleepVolume: 0.55
+  alertSound: {fileID: 8300000, guid: f8e9cb975ea0f4046a50f259fb25c2bd, type: 3}
+  chaseSounds:
+  - {fileID: 8300000, guid: f8e9cb975ea0f4046a50f259fb25c2bd, type: 3}
+  chaseSoundInterval: {x: 7, y: 13}
+  attackSound: {fileID: 8300000, guid: 651b631cb12625b4298508fd59147563, type: 3}
+  attackSoundChance: 0.25
+  hitPlayerSound: {fileID: 8300000, guid: 651b631cb12625b4298508fd59147563, type: 3}
+  hitPlayerSoundChance: 0.5
+  deathSound: {fileID: 8300000, guid: 6e5dcf3de6d244b48bc7bf6eef79188c, type: 3}
+  deathPitch: 1
+  voiceVolume: 1
+  voicePitch: {x: 1, y: 1.15}
+  hearingDistance: 25

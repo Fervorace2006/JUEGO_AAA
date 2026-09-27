@@ -54,3 +54,18 @@ MonoBehaviour:
   displayName: Zombie
   healthBarColor: {r: 0.16, g: 0.85, b: 0.25, a: 1}
   nameplateScale: 1
+  sleepLoop: {fileID: 0}
+  sleepVolume: 0.5
+  alertSound: {fileID: 8300000, guid: 1710d57cc7936f845b672e5d559f11b5, type: 3}
+  chaseSounds:
+  - {fileID: 8300000, guid: 1710d57cc7936f845b672e5d559f11b5, type: 3}
+  chaseSoundInterval: {x: 5, y: 10}
+  attackSound: {fileID: 8300000, guid: 1710d57cc7936f845b672e5d559f11b5, type: 3}
+  attackSoundChance: 0.7
+  hitPlayerSound: {fileID: 0}
+  hitPlayerSoundChance: 0.5
+  deathSound: {fileID: 8300000, guid: 1710d57cc7936f845b672e5d559f11b5, type: 3}
+  deathPitch: 0.7
+  voiceVolume: 1
+  voicePitch: {x: 0.8, y: 1}
+  hearingDistance: 25

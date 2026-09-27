@@ -215,6 +215,7 @@ namespace JuegoAAA.UI
             SetGroup(mainGroup, false);
             Heartbeat(1);
             StartCoroutine(LoadGame());
+            ForestVR.GameAudio.Music(null, 1.5f);
         }
 
         IEnumerator LoadGame()
@@ -318,6 +319,9 @@ namespace JuegoAAA.UI
             sfx = gameObject.AddComponent<AudioSource>();
             sfx.spatialBlend = 0;
             heartbeat = HeartbeatClip();
+            // Music from Assets/05_Sounds (Resources/GameAudio), under the generated drone.
+            var audio = ForestVR.GameAudio.Get;
+            if (audio != null && audio.menuMusic != null) ForestVR.GameAudio.Music(audio.menuMusic, 4);
         }
 
         // Low beating tones and dark wind, 8 seconds that loop seamlessly.

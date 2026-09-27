@@ -38,6 +38,8 @@ namespace ForestVR
             readyAt = Time.time + grip.settings.cooldown;
             var shot = Instantiate(projectilePrefab, muzzle.position, muzzle.rotation);
             shot.Launch(grip.settings, grip.Owner, transform, muzzle.forward, 1, muzzle.position);
+            var audio = GameAudio.Get;
+            if (audio != null) GameAudio.PlayAt(audio.gunshot, muzzle.position, 1, Random.Range(.95f, 1.05f), 80);
             return true;
         }
         void OnDestroy()

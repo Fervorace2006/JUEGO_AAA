@@ -49,3 +49,17 @@ MonoBehaviour:
   displayName: Hombre Lobo
   healthBarColor: {r: 0.85, g: 0.08, b: 0.08, a: 1}
   nameplateScale: 1.4
+  sleepLoop: {fileID: 0}
+  sleepVolume: 0.5
+  alertSound: {fileID: 8300000, guid: 10d7673d2f30f154f95a8c8ee2306058, type: 3}
+  chaseSounds: []
+  chaseSoundInterval: {x: 8, y: 14}
+  attackSound: {fileID: 0}
+  attackSoundChance: 0.6
+  hitPlayerSound: {fileID: 0}
+  hitPlayerSoundChance: 0.5
+  deathSound: {fileID: 8300000, guid: 10d7673d2f30f154f95a8c8ee2306058, type: 3}
+  deathPitch: 0.6
+  voiceVolume: 1
+  voicePitch: {x: 0.95, y: 1}
+  hearingDistance: 60

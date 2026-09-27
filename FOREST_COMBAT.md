@@ -15,6 +15,26 @@
 
 Se muestra con una tarjeta de capítulo y una campana, narración con efecto de máquina de escribir en un panel que sigue suavemente la mirada, el objetivo arriba y un rombo rojo con la distancia sobre el lugar o el enemigo objetivo. Se ven siempre por encima de la escena. Al morir, la primera vez, se escucha «Todavía no. Mateo te necesita». Los textos están en `StoryDirector.Story()`.
 
+## Sonidos
+
+Los archivos están en `Assets/05_Sounds`. Los sonidos generales se asignan en `Assets/05_Sounds/Resources/GameAudio.asset`; los de cada enemigo, en la sección **Sonidos** de su `GoblinSettings` (`Assets/SO_`).
+
+| Sonido | Dónde suena |
+|---|---|
+| `disparo` | Cada disparo del revólver, en 3D desde el cañón (tono ligeramente variable). |
+| `duende-durmiendo` | Ronquido en bucle de cada duende dormido, en 3D; cada uno empieza en un punto distinto para que no ronquen al unísono. |
+| `goblin-voice-excited…` | Grito del duende al despertar y, de vez en cuando, mientras te persigue. |
+| `Risa_diabólica…` | Risa del duende al atacarte o golpearte, y desde detrás de ti cuando mueres. |
+| `goblin-death` | Muerte del duende. |
+| `zombie` | Gruñidos del zombi al despertar, mientras persigue y al atacar, y su muerte (más grave). |
+| `haunting-wolf-song` | Aullido del Hombre Lobo al aparecer y al morir (más grave). |
+| `cansado` | Respiración agotada del jugador con menos del 35 % de vida; más fuerte cuanto menos vida queda. |
+| `Voces_susurrantes…` | Susurros alrededor del jugador cada 45 a 100 s, y detrás de ti cuando «la tierra se abre» (capítulo III). |
+| `scary_music` | Música del bosque, en bucle y en streaming. |
+| `universfield-paranormal…` | Música del menú y del combate final (Luna de sangre). Al amanecer la música se apaga. |
+
+Cada enemigo tiene un tono de voz ligeramente distinto. Los efectos se precargan y son mono para sonar bien en 3D; las músicas se reproducen en streaming. El volumen general de música y efectos se ajusta en `GameAudio`.
+
 ## Menú de inicio
 
 `Assets/00_Scenes/MainMenu.unity` es la primera escena en Build Settings, seguida de `ForestScene`. Se crea sola la primera vez que Unity compila; para regenerarla usa el menú **Shadowwood > Crear o actualizar menu de inicio**. Contiene el rig VR, un suelo invisible y `ShadowwoodMenu`, que construye al empezar un panel de 3,4 m a 2,6 m delante del jugador:

@@ -63,6 +63,7 @@ namespace ForestVR
             }
             EnemyNameplate.Create(this, target);
             Rest();
+            EnemyVoice.Attach(this, targetHealth);
         }
         void Play(AnimationClip clip, bool restart = false, float fade = 0.25f, float speed = 1)
         {
