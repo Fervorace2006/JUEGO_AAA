@@ -25,6 +25,11 @@ namespace ForestVR
         sealed class MapSlot { public Vector3 position; public Quaternion rotation; public GoblinActor actor; public bool spawned; public double readyAt; }
         readonly List<MapSlot> mapSlots = new List<MapSlot>();
         bool populationPlaced;
+        // Set at runtime by the story to pace a chapter; negative uses the settings value.
+        [System.NonSerialized] public float respawnOverride = -1;
+        public float RespawnSeconds => respawnOverride >= 0 ? respawnOverride : settings.respawnSeconds;
+        // Lets the next enemy appear right away (used when a chapter starts).
+        public void ResetCooldown() { readyAt = 0; foreach (var slot in mapSlots) slot.readyAt = 0; }
         public double RemainingSeconds => System.Math.Max(0, readyAt - Time.timeAsDouble);
         void Start()
         {
@@ -80,7 +85,7 @@ namespace ForestVR
             var actor = Instantiate(goblinPrefab, position, chosen.rotation).GetComponent<GoblinActor>();
             actor.Initialize(settings, head, playerHealth);
             alive.Add(actor);
-            readyAt = Time.timeAsDouble + settings.respawnSeconds;
+            readyAt = Time.timeAsDouble + RespawnSeconds;
         }
         void AddCandidate(Transform point)
         {
@@ -101,7 +106,7 @@ namespace ForestVR
             foreach (var slot in mapSlots)
             {
                 if (slot.actor != null) continue;
-                if (slot.spawned) { slot.spawned = false; slot.readyAt = Time.timeAsDouble + settings.respawnSeconds; }
+                if (slot.spawned) { slot.spawned = false; slot.readyAt = Time.timeAsDouble + RespawnSeconds; }
                 if (Time.timeAsDouble < slot.readyAt || FlatDistance(head.position, slot.position) < settings.populationMinPlayerDistance) continue;
                 slot.actor = Instantiate(goblinPrefab, slot.position, slot.rotation).GetComponent<GoblinActor>();
                 slot.actor.Initialize(settings, head, playerHealth);
@@ -137,7 +142,7 @@ namespace ForestVR
         {
             if (!waitingForDeath) return;
             waitingForDeath = false;
-            readyAt = Time.timeAsDouble + settings.respawnSeconds;
+            readyAt = Time.timeAsDouble + RespawnSeconds;
             if (current != null) current.Health.Died -= BeginCooldown;
         }
         void OnDestroy() { if (current != null) current.Health.Died -= BeginCooldown; }

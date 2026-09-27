@@ -16,8 +16,8 @@ namespace JuegoAAA.UI.Editor
         const string GameScene = "Assets/00_Scenes/ForestScene.unity";
         const string Rig = "Assets/VRTemplateAssets/Prefabs/Setup/Complete XR Origin Set Up Hands Variant.prefab";
         const string Background = "Assets/05_UI/Textures/ShadowwoodMenu.png";
-        const string TitleFont = "Assets/05_UI/Fonts/CinzelDecorative-Bold.ttf";
-        const string TextFont = "Assets/05_UI/Fonts/Cinzel.ttf";
+        const string TitleFont = "Assets/05_UI/Resources/Fonts/CinzelDecorative-Bold.ttf";
+        const string TextFont = "Assets/05_UI/Resources/Fonts/Cinzel.ttf";
 
         static ShadowwoodMenuSetup()
         {

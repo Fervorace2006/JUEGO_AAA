@@ -1,11 +1,26 @@
 # Armas y duende en ForestScene
 
+## Historia
+
+`StoryDirector` (en `Assets/01_Scripts/Forest/Story`) se crea solo al cargar ForestScene y cuenta la historia por capítulos. Cada capítulo cambia la dinámica del juego:
+
+| Capítulo | Historia | Objetivo | Qué cambia en el juego |
+|---|---|---|---|
+| Prólogo · Tres noches | Mateo, tu hermano, entró en Shadowwood hace tres noches. Su linterna estaba junto a la mesa del cazador Elías Varga. | Toma un arma de la mesa. | Solo hay duendes dormidos; zombis y hombre lobo desactivados. |
+| I · Los que duermen | En la cabaña del cazador hay luz. | Llega a la cabaña sin despertar a los duendes. | Sigilo: si despiertas a uno, aviso «Te han oído». |
+| II · El diario del cazador | Los duendes robaron las páginas del diario que explican la maldición. | Elimina 3 duendes. | El marcador señala al duende más cercano; la noche se oscurece. |
+| III · Los que no descansan | «Cuando la sangre del bosque se derrama, los muertos despiertan.» | Elimina 5 zombis. | Los zombis salen sin parar (uno cada 6 s, hasta 3 a la vez); más oscuridad y niebla. |
+| IV · Luna de sangre | El cazador es el hombre lobo; Mateo está en el sótano. | Acaba con el Hombre Lobo. | Aparece el jefe; luna de sangre: niebla y luz rojas. Los zombis dejan de salir. |
+| Amanecer | Los muertos vuelven a la tierra; Mateo está vivo. | — | Amanece, los zombis que quedan caen, los duendes no reaparecen; «Fin» y vuelta al menú. |
+
+Se muestra con una tarjeta de capítulo y una campana, narración con efecto de máquina de escribir en un panel que sigue suavemente la mirada, el objetivo arriba y un rombo rojo con la distancia sobre el lugar o el enemigo objetivo. Se ven siempre por encima de la escena. Al morir, la primera vez, se escucha «Todavía no. Mateo te necesita». Los textos están en `StoryDirector.Story()`.
+
 ## Menú de inicio
 
 `Assets/00_Scenes/MainMenu.unity` es la primera escena en Build Settings, seguida de `ForestScene`. Se crea sola la primera vez que Unity compila; para regenerarla usa el menú **Shadowwood > Crear o actualizar menu de inicio**. Contiene el rig VR, un suelo invisible y `ShadowwoodMenu`, que construye al empezar un panel de 3,4 m a 2,6 m delante del jugador:
 
 - Fondo: `Assets/05_UI/Textures/ShadowwoodMenu.png` (el arte con el título SHADOWWOOD).
-- Tipografía: Cinzel Decorative (botones y títulos) y Cinzel (textos), romanas en mayúsculas como el título; licencia libre OFL en `Assets/05_UI/Fonts/OFL.txt`.
+- Tipografía: Cinzel Decorative (botones y títulos) y Cinzel (textos), romanas en mayúsculas como el título; licencia libre OFL en `Assets/05_UI/Resources/Fonts/OFL.txt`.
 - Terror: aparece desde negro, el farol del arte parpadea, la niebla se desplaza y cada 8 a 15 s el farol se apaga a tirones y la vista se tiñe de rojo con un latido. De fondo suena un zumbido grave con viento, generado por código. Al señalar un botón, el texto se vuelve rojo sangre, crece, tiembla y se subraya.
 - En el editor, Play empieza siempre desde el menú aunque tengas abierta ForestScene (`EditorSceneManager.playModeStartScene`). Para probar el bosque directamente, desmarca **Shadowwood > Empezar Play siempre desde el menu**. En el simulador, **Enter** equivale a JUGAR y **Esc** cierra los controles, porque el simulador desactiva el ratón sobre la UI.
 - Botones: **JUGAR** (funde a negro y carga ForestScene), **CONTROLES** (panel con los controles) y **SALIR**. Se usan con el rayo de los mandos o, en el simulador, con el ratón.
