@@ -36,7 +36,9 @@ namespace ForestVR
         // Closer than this it notices the player even behind its back (it hears and smells them).
         const float CloseAwareness = 2.5f;
         float aggroUntil, turnStarted, lastHealth, animSpeed = 1;
-        const float ReachMargin = .35f;
+        const float ReachMargin = .35f, RunMargin = 1;
+        bool running;
+        Vector3 chaseHeading;
         bool inReach, turningInPlace;
         Vector3 knockback;
         Transform hips;
@@ -49,6 +51,7 @@ namespace ForestVR
             settings = config; target = playerHead; targetHealth = playerHealth;
             health = GetComponent<Health>(); health.Initialize(settings.health); lastHealth = health.Current;
             body = GetComponent<CharacterController>();
+            IgnoreBlockers();
             health.Died += Die; health.Damaged += ReactToHit;
             if (animator == null) animator = GetComponentInChildren<Animator>();
             if (animator != null)
@@ -231,13 +234,21 @@ namespace ForestVR
             {
                 // Head for the player, but around trees, rocks and walls instead of pushing into them.
                 var heading = Steer(Flat(lastKnown - transform.position).normalized);
+                // The way around an obstacle can flip from one side to the other between frames; blend it so the
+                // body turns smoothly instead of shaking.
+                chaseHeading = chaseHeading.sqrMagnitude < .01f ? heading
+                    : Vector3.Slerp(chaseHeading, heading, 1 - Mathf.Exp(-8 * Time.deltaTime)).normalized;
+                heading = chaseHeading;
                 Face(transform.position + heading, settings.turnSpeed);
                 var before = transform.position;
                 bool wounded = settings.woundedWalk != null && settings.woundedThreshold > 0
                     && health.Current <= health.Maximum * settings.woundedThreshold;
-                bool running = (wounded ? settings.woundedRun != null && settings.woundedRunSpeed > 0
+                // Runs beyond runDistance and keeps running until a meter closer: right at that distance it switched
+                // between running and walking every frame (the werewolf trembled while chasing).
+                float chaseDistance = Flat(lastKnown - transform.position).magnitude;
+                running = (wounded ? settings.woundedRun != null && settings.woundedRunSpeed > 0
                     : settings.run != null && settings.runSpeed > 0)
-                    && Flat(lastKnown - transform.position).magnitude > settings.runDistance;
+                    && chaseDistance > settings.runDistance - (running ? RunMargin : 0);
                 float moveSpeed = wounded ? (running ? settings.woundedRunSpeed : settings.woundedSpeed)
                     : (running ? settings.runSpeed : settings.speed);
                 body.Move(heading * (moveSpeed * Time.deltaTime));
@@ -255,6 +266,7 @@ namespace ForestVR
             }
             else
             {
+                running = false; chaseHeading = Vector3.zero;
                 Idle(); remembersTarget = false;
                 // Once awakened, this enemy stays alert; sleep is only its initial state.
             }
@@ -394,6 +406,8 @@ namespace ForestVR
         // Lands the corpse on whatever is under it (ground, rock, bridge), so it neither floats nor sinks.
         void DropToFloorBelow()
         {
+            // The real floor under it, never a weapon, another enemy or the player it fell on.
+            if (TryGround(out float floor)) { transform.position = new Vector3(transform.position.x, floor, transform.position.z); return; }
             float lift = body.height * 0.5f;
             float best = float.PositiveInfinity;
             foreach (var hit in Physics.RaycastAll(transform.position + Vector3.up * lift, Vector3.down, lift + 3, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
@@ -486,6 +500,17 @@ namespace ForestVR
             skeleton.position += Vector3.up * groundShift;
         }
 
+        // The body walks around the player and the weapons instead of stepping onto them: its step offset let it
+        // climb the colliders of a held weapon or of the player during an attack, and it rose off the ground.
+        void IgnoreBlockers()
+        {
+            int weapons = LayerMask.NameToLayer("Weapons");
+            if (weapons >= 0) body.excludeLayers |= 1 << weapons;
+            if (targetHealth != null)
+                foreach (var collider in targetHealth.GetComponentsInChildren<Collider>(true))
+                    if (collider != body) Physics.IgnoreCollision(body, collider);
+        }
+
         static float LowestY(Transform[] list)
         {
             float lowest = float.PositiveInfinity;
@@ -497,7 +522,8 @@ namespace ForestVR
         bool TryGround(out float height)
         {
             height = 0;
-            var from = transform.position + Vector3.up * .8f;
+            // From just above the feet: higher up it found tables, rocks and branches and stood the body on them.
+            var from = transform.position + Vector3.up * .5f;
             int count = Physics.RaycastNonAlloc(from, Vector3.down, groundHits, 2.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
             float best = float.PositiveInfinity;
             for (int i = 0; i < count; i++)

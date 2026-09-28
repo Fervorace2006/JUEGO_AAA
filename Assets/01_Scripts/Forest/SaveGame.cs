@@ -3,11 +3,13 @@ using System.IO;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace ForestVR
 {
     // One saved game in the app's storage (on the Quest, inside the headset): the scene, the story chapter, the pages,
-    // the player's health and where their head was and looked. CONTINUAR PARTIDA in the start menu loads it: the saved
+    // the player's health, where their head was and looked, and the weapon in each hand. CONTINUAR PARTIDA in the start menu loads it: the saved
     // chapter starts again from its beginning (its enemies come back), with the player at the saved spot and health.
     public static class SaveGame
     {
@@ -22,6 +24,9 @@ namespace ForestVR
             public Vector3 forward;
             public float playSeconds;
             public int enemiesDefeated;
+            // Weapon held in each hand when saving ("hacha", "arco", "revolver"; empty = nothing).
+            public string leftHand;
+            public string rightHand;
             public string savedAt;
         }
 
@@ -59,6 +64,8 @@ namespace ForestVR
                 forward = forward.sqrMagnitude > .001f ? forward.normalized : Vector3.forward,
                 playSeconds = GameStats.PlaySeconds,
                 enemiesDefeated = GameStats.EnemiesDefeated,
+                leftHand = WeaponName(WeaponGrip.HeldIn(InteractorHandedness.Left)),
+                rightHand = WeaponName(WeaponGrip.HeldIn(InteractorHandedness.Right)),
                 savedAt = System.DateTime.Now.ToString("dd/MM/yyyy HH:mm"),
             };
             try
@@ -121,6 +128,36 @@ namespace ForestVR
             if (status == null) status = Object.FindAnyObjectByType<PlayerCombatStatus>();
             var health = status != null ? status.GetComponent<Health>() : null;
             if (health != null && data.health > 0) health.SetCurrent(data.health);
+            // Once the player stands where they saved, the weapons they held come back to the same hands.
+            yield return new WaitForSeconds(.2f);
+            GiveBack(origin, InteractorHandedness.Left, data.leftHand);
+            GiveBack(origin, InteractorHandedness.Right, data.rightHand);
+        }
+
+        static string WeaponName(WeaponGrip weapon)
+        {
+            if (weapon == null) return "";
+            if (weapon.GetComponent<VRAxe>() != null) return "hacha";
+            if (weapon.GetComponent<VRBow>() != null) return "arco";
+            if (weapon.GetComponent<VRRevolver>() != null) return "revolver";
+            return weapon.name;
+        }
+
+        // Puts the saved weapon in that hand as if it had been grabbed: it stays there until Grip is pressed again.
+        static void GiveBack(XROrigin origin, InteractorHandedness hand, string weaponName)
+        {
+            if (string.IsNullOrEmpty(weaponName)) return;
+            WeaponGrip weapon = null;
+            foreach (var candidate in Object.FindObjectsByType<WeaponGrip>())
+                if (!candidate.IsHeld && WeaponName(candidate) == weaponName) { weapon = candidate; break; }
+            if (weapon == null || weapon.Grab == null) return;
+            XRBaseInputInteractor interactor = null;
+            foreach (var candidate in origin.GetComponentsInChildren<XRBaseInputInteractor>())
+                if (candidate.isActiveAndEnabled && candidate.handedness == hand && !candidate.hasSelection
+                    && (candidate is NearFarInteractor || candidate is XRDirectInteractor)) { interactor = candidate; break; }
+            var manager = weapon.Grab.interactionManager;
+            if (interactor == null || manager == null) return;
+            manager.SelectEnter((IXRSelectInteractor)interactor, (IXRSelectInteractable)weapon.Grab);
         }
     }
 }

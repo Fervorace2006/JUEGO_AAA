@@ -123,8 +123,9 @@ namespace JuegoAAA.UI
             var save = ForestVR.SaveGame.Exists ? ForestVR.SaveGame.Read() : null;
             if (save != null)
             {
-                AddMenuButton("CONTINUAR PARTIDA", main, 104, y, 500, ContinueGame, $"{ChapterName(save.chapter)}  ·  {save.savedAt}");
-                y += 118;
+                // Chapter and date on two lines of their own, so they stay inside the button.
+                AddMenuButton("CONTINUAR PARTIDA", main, 104, y, 500, ContinueGame, $"{ChapterName(save.chapter)}\nGuardado: {save.savedAt}");
+                y += 150;
             }
             AddMenuButton(save != null ? "NUEVA PARTIDA" : "JUGAR", main, 104, y, 500, Play); y += 100;
             AddMenuButton("CONTROLES", main, 104, y, 500, () => ShowControls(true)); y += 100;
@@ -149,7 +150,7 @@ namespace JuegoAAA.UI
         void AddMenuButton(string text, RectTransform parent, float x, float y, float w, UnityEngine.Events.UnityAction onClick,
             string detail = null, bool centered = false)
         {
-            float h = detail != null ? 100 : 82;
+            float h = detail != null ? 132 : 82;
             var go = new GameObject(text + " Button", typeof(RectTransform));
             var rect = (RectTransform)go.transform;
             Place(rect, parent, x, y, w, h);
@@ -163,13 +164,15 @@ namespace JuegoAAA.UI
             Place(bar.rectTransform, rect, 0, 0, 6, h);
             bar.color = Blood; bar.raycastTarget = false;
             float textX = centered ? 0 : 30;
-            var label = Label("Text", rect, text, titleFont, 40, textX, detail != null ? 8 : 0, w - textX, detail != null ? 56 : h,
+            var label = Label("Text", rect, text, titleFont, 40, textX, detail != null ? 6 : 0, w - textX - 12, detail != null ? 58 : h,
                 centered ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft);
             label.color = Bone;
+            FitInside(label, 24);
             if (detail != null)
             {
-                var sub = Label("Detail", rect, detail, textFont, 22, textX + 2, 60, w - textX - 10, 32, TextAnchor.MiddleLeft);
+                var sub = Label("Detail", rect, detail, textFont, 22, textX + 2, 64, w - textX - 14, 62, TextAnchor.UpperLeft);
                 sub.color = new Color(.7f, .64f, .55f);
+                FitInside(sub, 14);
             }
             var line = new GameObject("Underline", typeof(RectTransform)).AddComponent<Image>();
             Place(line.rectTransform, rect, w / 2, h - 6, 0, 2);
@@ -181,6 +184,15 @@ namespace JuegoAAA.UI
             var group = go.AddComponent<CanvasGroup>();
             group.alpha = 0;
             menuItems.Add((rect, group, rect.anchoredPosition));
+        }
+
+        // A long text shrinks to fit its box instead of spilling over the next button.
+        static void FitInside(Text label, int smallest)
+        {
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = smallest;
+            label.resizeTextMaxSize = label.fontSize;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
         }
 
         readonly System.Collections.Generic.List<(RectTransform rect, CanvasGroup group, Vector2 home)> menuItems =
