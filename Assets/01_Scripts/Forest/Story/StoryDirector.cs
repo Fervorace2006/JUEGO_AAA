@@ -131,8 +131,8 @@ namespace ForestVR
                 hud.SetMarker(null);
                 hud.SetObjective("");
                 yield return Say(
-                    "La primera página, con la letra de Mateo: «Dejé el arco en la mesa del norte, pasada la roca del musgo».",
-                    "«Al oeste de esa mesa la tierra está removida. No te acerques de noche.»");
+                    "Mateo dejó su arco en la mesa del norte, pasada la roca del musgo.",
+                    "Y avisa: al oeste de esa mesa la tierra está removida.");
                 yield return hud.ChapterCard("Capítulo II", "Los que no descansan");
                 hud.SetObjective("Ve al norte y toma el arco de la segunda mesa");
                 hud.SetMarker(AnchorOn("MESA 2", "Segunda mesa"), .6f);
@@ -153,8 +153,8 @@ namespace ForestVR
                 hud.SetMarker(null);
                 hud.SetObjective("");
                 yield return Say(
-                    "La segunda página: «El revólver está en la mesa del suroeste. Cárgalo antes de que salga la luna».",
-                    "«Si ves luz en la cabaña, no es mía.»");
+                    "Su revólver espera en la mesa del suroeste. Hay que tenerlo antes de que salga la luna.",
+                    "Y cuando veas luz en la cabaña, ve hacia ella.");
                 hud.SetObjective("Ve al suroeste y toma el revólver de la tercera mesa");
                 hud.SetMarker(AnchorOn("MESA 3", "Tercera mesa"), .6f);
                 while (!Holding<VRRevolver>()) yield return null;
@@ -162,8 +162,8 @@ namespace ForestVR
                 // The light comes on in the cabin to the south, where the story ends.
                 if (cabinLight != null) cabinLight.TurnOn();
                 yield return Say(
-                    "Al sur, entre los árboles, se enciende una luz en la cabaña. Alguien está ahí dentro.",
-                    "Un aullido responde desde el camino.");
+                    "Al sur, entre los árboles, se enciende una luz en la cabaña. La señal de Mateo.",
+                    "Un aullido responde desde el camino. La luna se tiñe de rojo.");
                 Night.BloodMoon(8);
                 if (GameAudio.Get != null) GameAudio.Music(GameAudio.Get.bossMusic, 4);
                 yield return hud.ChapterCard("Capítulo III", "Luna de sangre");
@@ -182,8 +182,8 @@ namespace ForestVR
                 GameAudio.Music(null, 8);
                 StartCoroutine(DeadReturnToEarth());
                 yield return Say(
-                    "La última página: «Me escondo en la cabaña. Encenderé la luz cuando sea seguro».",
-                    "La luz sigue encendida. Mateo te espera.");
+                    "Amanece. La lámpara de la cabaña sigue encendida.",
+                    "Lo último que descubrió Mateo te espera en el cajón de su mesa.");
                 var door = SceneDoor.Current;
                 if (door != null)
                 {
@@ -231,7 +231,7 @@ namespace ForestVR
                 yield return new WaitForSeconds(.25f);
             }
             hud.SetMarker(null);
-            yield return Say($"Encontraste una pieza de las notas de tu hermano ({pageNumber}/3).");
+            yield return ReadPage(pageNumber);
         }
 
         PagePickup NearestPage()
@@ -243,6 +243,18 @@ namespace ForestVR
                 if (d < closest) { closest = d; best = page; }
             }
             return best;
+        }
+
+        // The page just picked up, read on paper in front of the player (its text is the NotePage asset of that number).
+        // The story goes on once it is closed (trigger) or after a while.
+        IEnumerator ReadPage(int pageNumber)
+        {
+            hud.SetObjective("", false);
+            var page = NotePage.Load(pageNumber);
+            if (page == null) { yield return Say($"Encontraste una pieza de las notas de tu hermano ({pageNumber}/3)."); yield break; }
+            var reader = NoteReader.Show(head, page, 30);
+            while (reader != null) yield return null;
+            yield return Say($"Página {pageNumber} de 3.");
         }
 
         IEnumerator Say(params string[] lines)
@@ -316,6 +328,7 @@ namespace ForestVR
             actor.Health.Died += () =>
             {
                 kills[enemy] = Kills(enemy) + 1;
+                GameStats.CountDefeat();
                 if (spawners.TryGetValue(enemy, out var spawner) && spawner.InitialWaveReady
                     && Kills(enemy) >= spawner.EncounterCount && dropped.Add(enemy))
                     PagePickup.TryDrop(actor.transform.position + actor.transform.forward * .5f, null);

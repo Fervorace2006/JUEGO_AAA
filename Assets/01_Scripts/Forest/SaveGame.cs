@@ -20,6 +20,8 @@ namespace ForestVR
             public float health;
             public Vector3 position;
             public Vector3 forward;
+            public float playSeconds;
+            public int enemiesDefeated;
             public string savedAt;
         }
 
@@ -49,11 +51,14 @@ namespace ForestVR
             var data = new Data
             {
                 scene = SceneManager.GetActiveScene().name,
-                chapter = director != null ? director.Chapter : 0,
+                // In the cabin the story is in its last chapter (CabinDirector).
+                chapter = director != null ? director.Chapter : CabinDirector.Current != null ? CabinDirector.Chapter : 0,
                 pages = PagePickup.Collected,
                 health = health != null ? health.Current : 0,
                 position = head != null ? head.position : Vector3.zero,
                 forward = forward.sqrMagnitude > .001f ? forward.normalized : Vector3.forward,
+                playSeconds = GameStats.PlaySeconds,
+                enemiesDefeated = GameStats.EnemiesDefeated,
                 savedAt = System.DateTime.Now.ToString("dd/MM/yyyy HH:mm"),
             };
             try
@@ -70,6 +75,9 @@ namespace ForestVR
             pending = Read();
             chapterTaken = false; poseTaken = false;
             if (pending == null || string.IsNullOrEmpty(pending.scene)) { pending = null; return null; }
+            GameStats.Restore(pending.playSeconds, pending.enemiesDefeated);
+            // The forest story sets the pages from its chapter; other scenes (the cabin) keep the saved ones.
+            PagePickup.SetCollected(pending.pages);
             return pending.scene;
         }
 

@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c3e9a1f5b2d4e8a9f6c1d3b5a7e9c21, type: 3}
+  m_Name: Nota4_CartaDeMateo
+  m_EditorClassIdentifier: Assembly-CSharp::ForestVR.NotePage
+  number: 4
+  title: "Carta de Mateo"
+  text: "Si estás leyendo esto, llegaste más lejos que yo.\n\nLos duendes, los muertos, la bestia... nada de eso nació en Shadowwood. Todo baja de la montaña cuando la luna se tiñe de rojo, y cada noche oigo una voz que me llama desde la cima.\n\nVoy a subir y acabar con esto antes de que la luna vuelva a sangrar. Me llevo la linterna y lo poco que queda de comida.\n\nNo me sigas. Todavía no."
+  ending: "— Mateo"

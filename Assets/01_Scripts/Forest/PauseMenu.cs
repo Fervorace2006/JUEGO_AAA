@@ -7,13 +7,15 @@ using UnityEngine.UI;
 
 namespace ForestVR
 {
-    // Pause menu of the forest: the X button of the left Touch controller (or its Menu button ☰) opens it in front of the player and
+    // Pause menu of the game (forest and cabin): the X button of the left Touch controller (or its Menu button ☰) opens it in front of the player and
     // freezes the game (enemies, story, sounds). Point with the controller and pull the trigger:
     // CONTINUAR JUEGO closes it, GUARDAR PARTIDA saves this moment, SALIR DE LA PARTIDA goes back to the start menu,
     // where CONTINUAR PARTIDA loads the last save. In the editor Escape or P also open it.
     public sealed class PauseMenu : MonoBehaviour
     {
-        const string GameScene = "ForestScene", MenuScene = "MainMenu";
+        const string MenuScene = "MainMenu";
+        // The scenes of the game where it can be opened: the forest and the cabin.
+        static readonly string[] GameScenes = { "ForestScene", "InteriorHouse" };
         const float Distance = 1.4f;
         public static bool Paused { get; private set; }
 
@@ -33,7 +35,7 @@ namespace ForestVR
         static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             SetPaused(false);
-            if (scene.name != GameScene) return;
+            if (System.Array.IndexOf(GameScenes, scene.name) < 0) return;
             var go = new GameObject("Pause Menu");
             SceneManager.MoveGameObjectToScene(go, scene);
             go.AddComponent<PauseMenu>();
@@ -74,6 +76,14 @@ namespace ForestVR
         {
             var camera = Camera.main;
             if (camera == null) return;
+            // The cabin has no EventSystem of its own: the controller ray needs one to press the buttons.
+            if (UnityEngine.EventSystems.EventSystem.current == null)
+            {
+                var events = new GameObject("EventSystem");
+                SceneManager.MoveGameObjectToScene(events, gameObject.scene);
+                events.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                events.AddComponent<UnityEngine.XR.Interaction.Toolkit.UI.XRUIInputModule>();
+            }
             SetPaused(true);
             Build(camera.transform);
             var save = SaveGame.Read();

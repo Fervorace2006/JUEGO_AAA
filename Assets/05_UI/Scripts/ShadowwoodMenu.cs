@@ -217,7 +217,8 @@ namespace JuegoAAA.UI
                 case 1: return "Capítulo I · Los que duermen";
                 case 2: return "Capítulo II · Los que no descansan";
                 case 3: return "Capítulo III · Luna de sangre";
-                default: return "Amanecer";
+                case 4: return "Amanecer · El camino a la cabaña";
+                default: return "Capítulo IV · La cabaña";
             }
         }
 
@@ -318,6 +319,7 @@ namespace JuegoAAA.UI
         {
             if (loading) return;
             ForestVR.SaveGame.ClearPending();
+            ForestVR.GameStats.Reset();
             StartGame(gameScene);
         }
 
