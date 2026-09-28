@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d64114c612858044fa41ea677dcd7cee, type: 3}
   m_Name: Axe
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.WeaponSettings
-  damage: 40
-  cooldown: 0.65
+  damage: 35
+  cooldown: 0.5
   projectileSpeed: 1
   gravity: 0
-  hitRadius: 0.1
+  hitRadius: 0.07
   projectileLifetime: 15
   maximumDraw: 0.55
   minimumDraw: 0.08
