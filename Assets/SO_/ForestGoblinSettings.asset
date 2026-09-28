@@ -12,20 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df4759b936ddcbb49a59498d25132c48, type: 3}
   m_Name: ForestGoblinSettings
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.GoblinSettings
-  health: 100
-  damage: 10
-  speed: 1.6
-  detectionRadius: 10
-  wakeRadius: 3
+  health: 120
+  damage: 12
+  speed: 1.8
+  detectionRadius: 13
+  wakeRadius: 5
   visionAngle: 110
-  memorySeconds: 4
-  turnSpeed: 180
+  memorySeconds: 6
+  turnSpeed: 220
   restAfterSeconds: 10
   attackRange: 1.5
-  attackCooldown: 2
+  attackCooldown: 1.4
   attackImpactDelay: 0.45
   slowAttackImpactDelay: 0.9
-  slowAttackDamage: 30
+  slowAttackDamage: 26
+  cooldownVariation: 0.25
+  attackAnimSpeed: 1.25
   respawnSeconds: 300
   maxAlive: 3
   zoneRadius: 500

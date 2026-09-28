@@ -20,6 +20,11 @@ namespace ForestVR
         [Min(0)] public float attackImpactDelay = 0.45f;
         [Min(0)] public float slowAttackImpactDelay = 0.9f;
         [Min(0)] public float slowAttackDamage = 30;
+        [Tooltip("Playback speed of its attack clips: above 1 a quick, nervous blow (goblin), below 1 a slow heavy one (zombie). " +
+                 "The moment the blow lands follows the clip, so it always matches the swing.")]
+        [Range(.5f, 2)] public float attackAnimSpeed = 1;
+        [Tooltip("Random share added or removed from the cooldown between attacks, so the rhythm cannot be predicted.")]
+        [Range(0, .5f)] public float cooldownVariation = .2f;
         [Min(0)] public float respawnSeconds = 1200;
         [Tooltip("Enemies of this type alive at once at the spawner's points. 1 = the next one appears Respawn Seconds after the previous dies; "
             + "more = a new one appears every Respawn Seconds until this many are alive.")]

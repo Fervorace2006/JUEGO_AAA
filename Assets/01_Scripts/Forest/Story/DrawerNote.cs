@@ -5,12 +5,15 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace ForestVR
 {
-    // Mateo's letter, lying inside the drawer of the cabin (InteriorHouse). Open the drawer and grab it with Grip: it is
-    // read in front of the player (NotePage 4, Resources/Story) and the story's ending starts (CabinDirector).
+    // Mateo's letter, lying inside the drawer of the cabin (InteriorHouse): the notebook sheet placed in the scene
+    // (hojas_de_Libreta) or, without it, one made here. It slides out with the drawer; once the drawer is open, grab it
+    // with Grip: it is read in front of the player (NotePage 4, Resources/Story) and the story's ending starts.
     public sealed class DrawerNote : MonoBehaviour
     {
         const string SceneName = "InteriorHouse";
         const int LetterNumber = 4;
+        // The sheet placed inside the drawer in the scene.
+        const string PlacedSheetName = "hojas_de_libreta";
         // Where the note lies, in the drawer model's own space: on its floor, a little toward the back.
         static readonly Vector3 LocalPosition = new Vector3(0, .03f, -.08f);
         // How far the drawer must be pulled out before the note can be taken.
@@ -21,8 +24,12 @@ namespace ForestVR
         public VRDrawer Drawer => drawer;
 
         VRDrawer drawer;
-        Collider solid;
+        Collider[] solids;
         bool taken;
+        // Pose inside the drawer, in the drawer's own space: where the sheet was placed in the scene.
+        Vector3 relativePosition;
+        Quaternion relativeRotation;
+        bool placedInScene;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() { Picked = null; Current = null; }
@@ -39,7 +46,48 @@ namespace ForestVR
         {
             if (scene.name != SceneName) return;
             foreach (var drawer in FindObjectsByType<VRDrawer>())
-                if (drawer.gameObject.scene == scene) { Create(drawer); return; }
+                if (drawer.gameObject.scene == scene)
+                {
+                    var sheet = FindPlacedSheet(scene);
+                    if (sheet != null) Adopt(sheet, drawer); else Create(drawer);
+                    return;
+                }
+        }
+
+        static GameObject FindPlacedSheet(Scene scene)
+        {
+            foreach (var root in scene.GetRootGameObjects())
+                foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                    if (t.name.ToLowerInvariant().StartsWith(PlacedSheetName)) return t.gameObject;
+            return null;
+        }
+
+        // The sheet placed in the scene: it keeps the spot where it was put inside the drawer and moves with it.
+        static void Adopt(GameObject sheet, VRDrawer drawer)
+        {
+            // A solid, grabbable shape that fits the sheet (the model has no collider of its own).
+            foreach (var filter in sheet.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (filter.sharedMesh == null || filter.GetComponent<Collider>() != null) continue;
+                var box = filter.gameObject.AddComponent<BoxCollider>();
+                box.center = filter.sharedMesh.bounds.center;
+                // A little thickness so a flat sheet can still be touched with the hand.
+                var size = filter.sharedMesh.bounds.size;
+                box.size = Vector3.Max(size, Vector3.one * .02f / Mathf.Max(.0001f, filter.transform.lossyScale.x));
+            }
+            var body = sheet.GetComponent<Rigidbody>();
+            if (body == null) body = sheet.AddComponent<Rigidbody>();
+            body.isKinematic = true; body.useGravity = false;
+            var note = sheet.AddComponent<DrawerNote>();
+            note.drawer = drawer;
+            note.solids = sheet.GetComponentsInChildren<Collider>(true);
+            var d = drawer.transform;
+            note.relativePosition = d.InverseTransformPoint(sheet.transform.position);
+            note.relativeRotation = Quaternion.Inverse(d.rotation) * sheet.transform.rotation;
+            note.placedInScene = true;
+            var grab = sheet.AddComponent<XRSimpleInteractable>();
+            grab.selectEntered.AddListener(note.OnPicked);
+            Current = note;
         }
 
         static void Create(VRDrawer drawer)
@@ -55,7 +103,7 @@ namespace ForestVR
             body.isKinematic = true; body.useGravity = false;
             var note = go.AddComponent<DrawerNote>();
             note.drawer = drawer;
-            note.solid = go.GetComponentInChildren<Collider>();
+            note.solids = go.GetComponentsInChildren<Collider>(true);
             note.Follow();
             var grab = go.AddComponent<XRSimpleInteractable>();
             grab.selectEntered.AddListener(note.OnPicked);
@@ -67,6 +115,7 @@ namespace ForestVR
         {
             if (drawer == null) return;
             var d = drawer.transform;
+            if (placedInScene) { transform.SetPositionAndRotation(d.TransformPoint(relativePosition), d.rotation * relativeRotation); return; }
             // Lying flat, face up.
             transform.SetPositionAndRotation(d.TransformPoint(LocalPosition), d.rotation * Quaternion.Euler(90, 0, 0));
         }
@@ -83,7 +132,7 @@ namespace ForestVR
             if (taken) return;
             Follow();
             // Out of reach while the drawer is closed.
-            if (solid != null) solid.enabled = DrawerOpen();
+            if (solids != null) { bool open = DrawerOpen(); foreach (var solid in solids) if (solid != null) solid.enabled = open; }
         }
 
         void OnPicked(SelectEnterEventArgs args)

@@ -12,20 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df4759b936ddcbb49a59498d25132c48, type: 3}
   m_Name: ForestZombieSettings
   m_EditorClassIdentifier: Assembly-CSharp::ForestVR.GoblinSettings
-  health: 200
-  damage: 20
-  speed: 1.1
-  detectionRadius: 12
-  wakeRadius: 7
+  health: 240
+  damage: 22
+  speed: 1.2
+  detectionRadius: 14
+  wakeRadius: 8
   visionAngle: 105
-  memorySeconds: 6
+  memorySeconds: 8
   turnSpeed: 150
   restAfterSeconds: 15
   attackRange: 1.6
-  attackCooldown: 2.2
+  attackCooldown: 1.9
   attackImpactDelay: 0.6
   slowAttackImpactDelay: 1.2
-  slowAttackDamage: 35
+  slowAttackDamage: 38
+  cooldownVariation: 0.2
+  attackAnimSpeed: 0.9
   respawnSeconds: 300
   maxAlive: 3
   zoneRadius: 500
@@ -43,7 +45,7 @@ MonoBehaviour:
   slowAttack: {fileID: -203655887218126122, guid: 37353435d1b0e2245af5dd987dc93d0d, type: 3}
   attackedFromBack: {fileID: 0}
   run: {fileID: -203655887218126122, guid: f8a977929b7d9bc43a7007c0fd4515fb, type: 3}
-  runSpeed: 2.6
+  runSpeed: 3
   runDistance: 5
   woundedThreshold: 0.5
   woundedWalk: {fileID: -203655887218126122, guid: 4f6a4e1210565e246bf6c93d43eec0c3, type: 3}

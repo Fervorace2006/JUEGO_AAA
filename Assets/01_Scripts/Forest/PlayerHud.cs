@@ -13,7 +13,7 @@ namespace ForestVR
     // When everything is full and quiet the panel fades back so it does not distract.
     public sealed class PlayerHud : MonoBehaviour
     {
-        const float Distance = .7f, Drop = .21f, PixelsPerMeter = 1450;
+        const float Distance = .7f, Drop = .27f, PixelsPerMeter = 1450;
         const float BarWidth = 520, HealthHeight = 38, StaminaHeight = 17;
         static readonly Vector2 HealthRowPosition = new Vector2(0, 30), StaminaRowPosition = new Vector2(0, -20);
         static readonly Color Full = new Color(.2f, .85f, .3f), Mid = new Color(.95f, .7f, .15f), Low = new Color(.9f, .1f, .08f);

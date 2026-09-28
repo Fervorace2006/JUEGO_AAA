@@ -318,7 +318,7 @@ namespace ForestVR
             var clip = slow ? settings.slowAttack : settings.attack;
             attackRepeats = clip == lastAttackClip ? attackRepeats + 1 : 1; lastAttackClip = clip;
             // Slight speed variation so repeated attacks do not look identical; the impact follows the speed.
-            float speed = Random.Range(0.95f, 1.12f);
+            float speed = Random.Range(0.95f, 1.12f) * settings.attackAnimSpeed;
             float delay = StrikeTime(clip, slow ? settings.slowAttackImpactDelay : settings.attackImpactDelay) / speed;
             pendingDamage = slow ? settings.slowAttackDamage : settings.damage;
             CurrentState = State.Attacking; Play(clip, true, AttackFadeIn, speed);
@@ -326,7 +326,9 @@ namespace ForestVR
             // Leave a little early so the recovery blends into the next pose instead of snapping.
             float length = clip != null ? clip.length / speed : 1;
             stateEnds = Time.time + Mathf.Max(delay + 0.1f, length - AttackFadeOut);
-            nextAttack = Mathf.Max(stateEnds, Time.time + settings.attackCooldown);
+            // Not a fixed rhythm: the next blow comes a little sooner or later each time.
+            float cooldown = settings.attackCooldown * Random.Range(1 - settings.cooldownVariation, 1 + settings.cooldownVariation);
+            nextAttack = Mathf.Max(stateEnds, Time.time + cooldown);
         }
         void ReactToHit(Vector3 source)
         {
@@ -447,6 +449,14 @@ namespace ForestVR
         readonly RaycastHit[] groundHits = new RaycastHit[8];
         const float BodyThickness = .07f, MaxShift = .6f;
         static readonly Dictionary<Mesh, float> soleDepths = new Dictionary<Mesh, float>();
+        // Once dead, the real underside of the fallen body (lowest point of the skinned mesh), measured every
+        // BakeInterval: a bone is not the surface, and resting the lowest bone left the body floating a little.
+        SkinnedMeshRenderer groundSkin;
+        Mesh deadBake;
+        float deadLowest, nextDeadBake;
+        const float BakeInterval = .1f;
+        // The fallen body settles this much into the ground (leaves, grass), so it lies on it rather than just touching it.
+        const float DeadSink = .08f;
 
         void SetupGrounding()
         {
@@ -466,6 +476,7 @@ namespace ForestVR
             skeletonRest = skeleton.localPosition;
             // How far the mesh sole reaches below the lowest foot bone, measured once per model in the idle pose.
             var skin = GetComponentInChildren<SkinnedMeshRenderer>();
+            groundSkin = skin;
             soleBelowFeet = .03f;
             if (skin != null && skin.sharedMesh != null)
             {
@@ -492,7 +503,7 @@ namespace ForestVR
             skeleton.localPosition = skeletonRest;
             if (!TryGround(out float ground)) return;
             bool dead = health != null && health.IsDead;
-            float lowest = dead ? LowestY(bones) - BodyThickness : LowestY(feet) - soleBelowFeet;
+            float lowest = dead ? DeadBodyLowest() + DeadSink : LowestY(feet) - soleBelowFeet;
             float shift = Mathf.Clamp(ground - lowest, -MaxShift, MaxShift);
             // Smooth, so a step onto a root or a rock does not snap the body.
             groundShift = groundShiftReady ? Mathf.Lerp(groundShift, shift, 1 - Mathf.Exp(-15 * Time.deltaTime)) : shift;
@@ -509,6 +520,23 @@ namespace ForestVR
             if (targetHealth != null)
                 foreach (var collider in targetHealth.GetComponentsInChildren<Collider>(true))
                     if (collider != body) Physics.IgnoreCollision(body, collider);
+        }
+
+        // Lowest point of the fallen body in this frame's pose (skeleton at its rest offset), from the skinned mesh.
+        float DeadBodyLowest()
+        {
+            if (groundSkin == null) return LowestY(bones) - BodyThickness;
+            if (deadBake == null || Time.time >= nextDeadBake)
+            {
+                nextDeadBake = Time.time + BakeInterval;
+                if (deadBake == null) deadBake = new Mesh();
+                groundSkin.BakeMesh(deadBake, true);
+                var pose = Matrix4x4.TRS(groundSkin.transform.position, groundSkin.transform.rotation, Vector3.one);
+                float lowest = float.PositiveInfinity;
+                foreach (var v in deadBake.vertices) lowest = Mathf.Min(lowest, pose.MultiplyPoint3x4(v).y);
+                deadLowest = float.IsPositiveInfinity(lowest) ? LowestY(bones) - BodyThickness : lowest;
+            }
+            return deadLowest;
         }
 
         static float LowestY(Transform[] list)
@@ -543,6 +571,7 @@ namespace ForestVR
         {
             if (health != null) { health.Died -= Die; health.Damaged -= ReactToHit; }
             if (graph.IsValid()) graph.Destroy();
+            if (deadBake != null) Destroy(deadBake);
         }
         void OnDrawGizmosSelected()
         {
