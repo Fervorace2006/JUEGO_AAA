@@ -6,7 +6,8 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace ForestVR
 {
-    // Mateo's three notebook fragments are carried by the last enemy in each fixed encounter.
+    // Mateo's three notebook pages are carried by the last enemy of each encounter along the route through the forest;
+    // the cabin lights up when the last weapon is taken and the story ends through its door.
     public sealed class StoryDirector : MonoBehaviour
     {
         const string Goblin = "Duende", Zombie = "Zombie", Werewolf = "Hombre Lobo";
@@ -22,6 +23,7 @@ namespace ForestVR
         readonly HashSet<string> dropped = new HashSet<string>();
         readonly List<GoblinActor> living = new List<GoblinActor>();
         bool narrating, deathLineSaid;
+        CabinLight cabinLight;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Install()
@@ -81,62 +83,76 @@ namespace ForestVR
             yield return Story();
         }
 
+        // The route follows the scene: the camp clearing with MESA 1 and the sleeping goblins where you start (east),
+        // MESA 2 to the north past the mossy rock, the zombies' ground west of it, MESA 3 further south-west,
+        // the werewolf's ground north of the cabin, and the cabin in the south-west corner.
         IEnumerator Story()
         {
             yield return new WaitForSeconds(2.5f);
-            // ---------- Prologue ----------
+            cabinLight = CabinLight.Create(GameObject.Find("Casita Final"), SceneDoor.Current != null ? SceneDoor.Current.transform : null);
+
+            // ---------- Prologue: the camp ----------
             Chapter = 0;
             yield return hud.ChapterCard("Shadowwood", "Prólogo · Tres noches");
             yield return Say(
                 "Hace tres noches que Mateo, tu hermano, entró en Shadowwood. No volvió.",
-                "Sus notas quedaron dispersas entre las criaturas del bosque.",
-                "Encuentra las tres piezas de su libreta para seguir su rastro.");
+                "Este claro era su campamento. Su hacha sigue sobre la mesa.",
+                "Arrancó las páginas de su libreta y las fue dejando por el bosque. Síguelas.");
+            hud.SetObjective("Toma el hacha de la mesa del campamento");
+            hud.SetMarker(AnchorOn("MESA 1", "Mesa del campamento"), .6f);
+            while (!Holding<VRAxe>()) yield return null;
+            hud.SetMarker(null);
 
-            // ---------- I: the goblins and the diary pages ----------
+            // ---------- I: the goblins of the clearing ----------
             Chapter = 1;
             hud.SetObjective("");
-            hud.SetMarker(null);
-            yield return hud.ChapterCard("Capítulo I", "Las páginas robadas");
+            yield return hud.ChapterCard("Capítulo I", "Los que duermen");
             yield return Say(
-                "Los duendes guardan la primera pieza de la libreta de Mateo.",
-                "Elimínalos a todos y busca la pieza en el último que caiga.");
+                "Los duendes duermen aquí mismo, alrededor del claro. Solo despiertan si te acercas demasiado.",
+                "Uno de ellos guarda la primera página. Elimínalos: el último en caer la soltará.");
             Night.Darken(.25f, 10);
-            yield return EncounterAndPage(Goblin, 1, "Elimina a todos los duendes y consigue la primera pieza");
+            yield return EncounterAndPage(Goblin, 1, "Elimina a los duendes del claro y recoge la primera página");
 
-            // ---------- II: second table, the bow, the dead ----------
+            // ---------- II: north to MESA 2, then the dead to the west ----------
             Chapter = 2;
             hud.SetMarker(null);
             hud.SetObjective("");
-            Whisper(3);
             yield return Say(
-                "La primera nota de Mateo señala a los muertos más adelante.",
-                "Antes de ir, recoge el arco de la segunda mesa.");
+                "La primera página, con la letra de Mateo: «Dejé el arco en la mesa del norte, pasada la roca del musgo».",
+                "«Al oeste de esa mesa la tierra está removida. No te acerques de noche.»");
             yield return hud.ChapterCard("Capítulo II", "Los que no descansan");
-            hud.SetObjective("Toma el arco de la segunda mesa");
+            hud.SetObjective("Ve al norte y toma el arco de la segunda mesa");
             hud.SetMarker(AnchorOn("MESA 2", "Segunda mesa"), .6f);
             while (!Holding<VRBow>()) yield return null;
             hud.SetMarker(null);
+            Whisper(3);
+            yield return Say("Al oeste, la tierra se abre. Los muertos se levantan.");
             SetSpawner(Zombie, true);
             Night.Darken(.5f, 12);
-            yield return EncounterAndPage(Zombie, 2, "Elimina a todos los zombis y consigue la segunda pieza");
+            yield return EncounterAndPage(Zombie, 2, "Elimina a los zombis del oeste y recoge la segunda página");
             SetSpawner(Zombie, false);
 
-            // ---------- III: third table, the revolver, the werewolf ----------
+            // ---------- III: south to MESA 3, the cabin lights up, the werewolf ----------
             Chapter = 3;
             hud.SetMarker(null);
             hud.SetObjective("");
             yield return Say(
-                "La segunda nota de Mateo habla de un aullido junto a la cabaña.",
-                "Ve a la tercera mesa y toma el revólver antes de buscar al lobo.");
-            Night.BloodMoon(8);
-            if (GameAudio.Get != null) GameAudio.Music(GameAudio.Get.bossMusic, 4);
-            yield return hud.ChapterCard("Capítulo III", "Luna de sangre");
-            hud.SetObjective("Toma el revólver de la tercera mesa");
+                "La segunda página: «El revólver está en la mesa del suroeste. Cárgalo antes de que salga la luna».",
+                "«Si ves luz en la cabaña, no es mía.»");
+            hud.SetObjective("Ve al suroeste y toma el revólver de la tercera mesa");
             hud.SetMarker(AnchorOn("MESA 3", "Tercera mesa"), .6f);
             while (!Holding<VRRevolver>()) yield return null;
             hud.SetMarker(null);
+            // The light comes on in the cabin to the south, where the story ends.
+            if (cabinLight != null) cabinLight.TurnOn();
+            yield return Say(
+                "Al sur, entre los árboles, se enciende una luz en la cabaña. Alguien está ahí dentro.",
+                "Un aullido responde desde el camino.");
+            Night.BloodMoon(8);
+            if (GameAudio.Get != null) GameAudio.Music(GameAudio.Get.bossMusic, 4);
+            yield return hud.ChapterCard("Capítulo III", "Luna de sangre");
             SetSpawner(Werewolf, true);
-            yield return EncounterAndPage(Werewolf, 3, "Elimina al Hombre Lobo y consigue la última pieza");
+            yield return EncounterAndPage(Werewolf, 3, "Acaba con el Hombre Lobo que guarda el camino a la cabaña");
             SetSpawner(Werewolf, false);
 
             // ---------- Dawn: into the cabin ----------
@@ -147,8 +163,8 @@ namespace ForestVR
             GameAudio.Music(null, 8);
             StartCoroutine(DeadReturnToEarth());
             yield return Say(
-                "Las tres piezas de la libreta de Mateo apuntan a la cabaña.",
-                "Entra y busca la última pista en su interior.");
+                "La última página: «Me escondo en la cabaña. Encenderé la luz cuando sea seguro».",
+                "La luz sigue encendida. Mateo te espera.");
             var door = SceneDoor.Current;
             if (door != null)
             {

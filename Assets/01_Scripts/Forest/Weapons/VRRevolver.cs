@@ -9,7 +9,12 @@ namespace ForestVR
     {
         public Transform muzzle;
         public WeaponProjectile projectilePrefab;
+        [Tooltip("Red laser from the muzzle with a dot where the bullet will hit, while the revolver is held.")]
+        public bool aimGuide = true;
+        [Min(1)] public float aimGuideLength = 60;
         WeaponGrip grip;
+        AimGuide guide;
+        Health guideOwner;
         float readyAt;
         InputAction leftTrigger, rightTrigger;
         void Start()
@@ -30,6 +35,14 @@ namespace ForestVR
 #endif
             // The cooldown discards the duplicate when Activate fired for the same press.
             if (pressed) TryFire();
+        }
+        // After the grab has moved the revolver this frame. Bullets fly straight, so the laser is their exact path.
+        void LateUpdate()
+        {
+            if (!aimGuide || grip == null || muzzle == null || !grip.CanUse) { if (guide != null) guide.Hide(); return; }
+            if (guide == null) { guide = AimGuide.Create(transform, new Color(1f, .12f, .08f), .004f); guideOwner = null; guide.Ignore(transform); }
+            if (guideOwner != grip.Owner) { guideOwner = grip.Owner; guide.Ignore(transform, guideOwner != null ? guideOwner.transform : null); }
+            guide.ShowStraight(muzzle.position, muzzle.forward, aimGuideLength);
         }
         void Fire(ActivateEventArgs args) => TryFire();
         public bool TryFire()

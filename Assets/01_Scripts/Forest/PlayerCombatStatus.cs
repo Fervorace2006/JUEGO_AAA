@@ -8,7 +8,8 @@ namespace ForestVR
     {
         Health health;
         VRWorldLabel hint;
-        HudHealthBar bar;
+        PlayerHud bar;
+        PlayerStamina stamina;
         BloodScreen blood;
         InputAction recover;
         public void Initialize(Health playerHealth, Transform head)
@@ -16,8 +17,10 @@ namespace ForestVR
             if (health != null) return;
             health = playerHealth;
             hint = VRWorldLabel.Create(head, "Player Health", new Vector3(0, .18f, .85f));
-            // Lower left of the view, out of the way of the aim point.
-            bar = HudHealthBar.Create(head, new Vector3(-.30f, -.20f, .45f), new Vector2(.14f, .012f));
+            // Running with stamina, and the health and stamina bars low in the middle of the view.
+            stamina = GetComponent<PlayerStamina>();
+            if (stamina == null) stamina = gameObject.AddComponent<PlayerStamina>();
+            bar = PlayerHud.Create(head, health, stamina);
             blood = BloodScreen.Create(head, health);
             PlayerSounds.Create(health, head);
             health.onHealthChanged.AddListener(Refresh);
@@ -38,7 +41,6 @@ namespace ForestVR
         void OnRecover(InputAction.CallbackContext context) => Recover();
         void Refresh(float value)
         {
-            bar.SetFraction(value / health.Maximum);
             hint.gameObject.SetActive(health.IsDead);
             if (!health.IsDead) return;
             string message = "Sin vida\nA / X: recuperar vida";

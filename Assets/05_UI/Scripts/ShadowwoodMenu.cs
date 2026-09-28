@@ -124,6 +124,7 @@ namespace JuegoAAA.UI
                 "Arco: en la mano izquierda; tira de la cuerda con la derecha\n" +
                 "Hacha: golpea con fuerza\n" +
                 "Joystick: moverse y girar\n" +
+                "Clic en el joystick izquierdo: correr (gasta aliento)\n" +
                 "A / X: recuperar la vida al morir\n\n" +
                 "Los duendes duermen. No te acerques demasiado.",
                 textFont, 32, 318, 290, 900, 400, TextAnchor.UpperLeft).lineSpacing = 1.15f;

@@ -19,6 +19,10 @@ namespace ForestVR
         public float PullAmount { get; private set; }
         // Pull in meters (world space).
         public float DrawDistance => PullAmount * Vector3.Distance(restingNock.position, pullEnd.position);
+        [Tooltip("While drawing, show the arc the arrow will fly and a dot where it will land.")]
+        public bool aimGuide = true;
+        AimGuide guide;
+        Health guideOwner;
         WeaponGrip grip;
         IXRSelectInteractor drawingHand;
         WeaponProjectile nockedArrow;
@@ -73,6 +77,18 @@ namespace ForestVR
                 nockedArrow.transform.SetPositionAndRotation(nockPosition, NockFrame.rotation);
             }
             else RemoveArrow();
+            UpdateAimGuide();
+        }
+        // While the string is drawn far enough to shoot: the arc the arrow will fly and where it will land.
+        // Pulling harder flattens and lengthens it, exactly as the shot does.
+        void UpdateAimGuide()
+        {
+            bool aiming = aimGuide && drawingHand != null && nockedArrow != null && grip.CanUse && PullAmount >= minimumPull;
+            if (!aiming) { if (guide != null) guide.Hide(); return; }
+            if (guide == null) { guide = AimGuide.Create(transform, new Color(1f, .78f, .35f), .006f); guideOwner = null; guide.Ignore(transform); }
+            if (guideOwner != grip.Owner) { guideOwner = grip.Owner; guide.Ignore(transform, guideOwner != null ? guideOwner.transform : null); }
+            float speed = grip.settings.projectileSpeed * Mathf.Lerp(0.35f, 1, PullAmount);
+            guide.ShowArc(nockPosition, ShotDirection * speed, grip.settings.gravity);
         }
         // Reference PullInteraction: projection of the hand on the Start -> End segment, 0..1.
         float Pull(Vector3 handPosition)

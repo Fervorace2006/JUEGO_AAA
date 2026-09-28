@@ -4,16 +4,31 @@
 
 `StoryDirector` (en `Assets/01_Scripts/Forest/Story`) se crea solo al cargar ForestScene y cuenta la historia por capítulos. Cada capítulo cambia la dinámica del juego:
 
-| Capítulo | Historia | Objetivo | Qué cambia en el juego |
-|---|---|---|---|
-| Prólogo · Tres noches | Mateo, tu hermano, entró en Shadowwood hace tres noches. Su linterna estaba junto a la mesa del cazador Elías Varga. | Toma un arma de la mesa. | Solo hay duendes dormidos; zombis y hombre lobo desactivados. |
-| I · Los que duermen | En la cabaña del cazador hay luz. | Llega a la cabaña sin despertar a los duendes. | Sigilo: si despiertas a uno, aviso «Te han oído». |
-| II · El diario del cazador | Los duendes robaron las páginas del diario que explican la maldición. | Elimina 3 duendes. | El marcador señala al duende más cercano; la noche se oscurece. |
-| III · Los que no descansan | «Cuando la sangre del bosque se derrama, los muertos despiertan.» | Elimina 5 zombis. | Los zombis salen sin parar (uno cada 6 s, hasta 3 a la vez); más oscuridad y niebla. |
-| IV · Luna de sangre | El cazador es el hombre lobo; Mateo está en el sótano. | Acaba con el Hombre Lobo. | Aparece el jefe; luna de sangre: niebla y luz rojas. Los zombis dejan de salir. |
-| Amanecer | Los muertos vuelven a la tierra; Mateo está vivo. | — | Amanece, los zombis que quedan caen, los duendes no reaparecen; «Fin» y vuelta al menú. |
+| Capítulo | Lugar (ForestScene) | Historia | Objetivo | Qué cambia en el juego |
+|---|---|---|---|---|
+| Prólogo · Tres noches | Claro del campamento, al empezar (MESA 1) | Mateo entró en Shadowwood hace tres noches; este claro era su campamento y dejó páginas de su libreta por el bosque. | Toma el hacha de la mesa. | Solo hay duendes dormidos; zombis y hombre lobo desactivados. |
+| I · Los que duermen | El mismo claro (SPAWN_DUENDE) | Los duendes duermen alrededor del campamento; uno guarda la primera página. | Elimina a los duendes del claro y recoge la página. | La noche se oscurece. |
+| II · Los que no descansan | Al norte, pasada la roca del musgo (MESA 2); zombis al oeste (Spawn Zombie) | «Dejé el arco en la mesa del norte… al oeste la tierra está removida.» | Toma el arco; elimina a los zombis y recoge la página. | Los zombis se activan al tomar el arco; más oscuridad. |
+| III · Luna de sangre | Al suroeste (MESA 3); lobo en el camino a la cabaña (Spawn Wolf) | «El revólver está en la mesa del suroeste… si ves luz en la cabaña, no es mía.» | Toma el revólver; acaba con el Hombre Lobo y recoge la página. | Al tomar el revólver **se enciende la luz de la cabaña**; luna de sangre, música del jefe y aparece el lobo. |
+| Amanecer | Cabaña, en la esquina suroeste (Casita Final / Puerta Cabaña) | «Me escondo en la cabaña. Encenderé la luz cuando sea seguro.» | Entra en la cabaña. | Amanece, los zombis caen, la puerta se abre y carga `InteriorHouse`. |
 
-Se muestra con una tarjeta de capítulo y una campana, narración con efecto de máquina de escribir en un panel que sigue suavemente la mirada, el objetivo arriba y un rombo rojo con la distancia sobre el lugar o el enemigo objetivo. Se ven siempre por encima de la escena. Al morir, la primera vez, se escucha «Todavía no. Mateo te necesita». Los textos están en `StoryDirector.Story()`.
+La luz de la cabaña (`CabinLight`) es un farol real sobre la puerta (luz puntual de 9 m y un brillo visible a lo lejos a través de la niebla) más una luz interior con sombras que sale por la puerta y las ventanas. Al encenderse titubea y luego parpadea como una llama.
+
+En `InteriorHouse`, `Punto_de_Aparicion` y el jugador están en el centro de la habitación (8.15, 0.3, −6.3), mirando a la mesa del cajón. `PlayerSpawnPoint` coloca la **cabeza** del jugador sobre ese punto al cargar (y otra vez un segundo después), así no empieza fuera aunque esté de pie lejos del centro de su espacio de juego. `InteriorHouse` se añade a Build Settings después de ForestScene.
+
+Se muestra con una tarjeta de capítulo y una campana, narración con efecto de máquina de escribir (letra grande en negrita con contorno oscuro) en un panel que se queda quieto delante de ti y solo se recoloca si giras la cabeza más de 25°, la mirada, el objetivo arriba y un rombo rojo con la distancia sobre el lugar o el enemigo objetivo. Se ven siempre por encima de la escena. Al morir, la primera vez, se escucha «Todavía no. Mateo te necesita». Los textos están en `StoryDirector.Story()`.
+
+## Correr, aliento y barra de vida
+
+- **Correr:** clic en el joystick izquierdo mientras te mueves (en el simulador, mantener **Shift**). Vas 1,8 veces más rápido. Se deja de correr al pararte, con otro clic o al quedarte sin aliento.
+- **Aliento (estamina):** correr gasta 18 por segundo de 100; tras 1 s sin correr se recupera a 14 por segundo. Si llega a cero quedas agotado: la barra se pone roja y parpadea, oyes tu respiración agitada y no puedes correr hasta recuperar el 30 %. Se ajusta en `PlayerStamina`.
+- **Interfaz (`PlayerHud`):** fija abajo y al centro de la vista (a 0,7 m, sin balanceos ni retraso), inclinada hacia los ojos y siempre por encima de la escena; letras en negrita con contorno. La barra de vida (con marcas cada 25 % y el número) pasa de verde a ámbar y rojo; una franja clara muestra el daño recién recibido y se vacía tras un momento; cada golpe hace destellar y temblar la barra; al curarte destella en verde; con menos del 30 % late en rojo como un corazón. Debajo, la barra dorada de aliento. Cuando todo está lleno y tranquilo, el panel se atenúa un poco (80 %).
+
+## Punteros de apuntado
+
+- **Revólver:** mientras lo sostienes, un láser rojo sale del cañón y un punto brillante marca dónde impactará la bala. Las balas van rectas, así que el láser es su trayectoria exacta (hasta 60 m, `aimGuideLength`).
+- **Arco:** al tensar la cuerda lo suficiente para disparar, una línea dorada dibuja la parábola que seguirá la flecha y un punto marca dónde caerá. Usa la misma velocidad y gravedad que la flecha real: cuanto más tiras, más recta y lejana es la curva.
+- El punto se ve del mismo tamaño cerca o lejos y se apoya sobre la superficie o el enemigo. Las armas y el cuerpo del jugador no cortan la línea. Se desactivan con `aimGuide` en `VRRevolver` y `VRBow` (`AimGuide.cs`).
 
 ## Sonidos
 
@@ -127,7 +142,7 @@ En los puntos del spawner hay **un solo duende vivo** y una espera de **20 minut
 2. **Dormido o descansando no se levanta ni te persigue** a menos que estés muy cerca: 3 m (antes 8), con línea de visión, o que lo golpees. Entonces reproduce Getting Up.
 3. Ya levantado, ve en un sector frontal de 110° hasta 15 m. Persigue al jugador visible; al perderlo conserva su última posición durante 4 segundos, no conoce su posición nueva a través de paredes.
 4. Ataca únicamente a 1,5 m o menos. Alterna el ataque rápido y el lento (nunca el mismo tres veces seguidas), con ligeras variaciones de velocidad. Las animaciones se mezclan con transiciones suaves en vez de cortes. Durante el amago sigue girando hacia ti y da un paso para alcanzarte; el daño se aplica en el momento del golpe, medido automáticamente en cada animación (cuando la mano llega más adelante). Volver a comprobar distancia, orientación y obstáculos en el instante del golpe permite esquivarlo.
-5. Si recibe daño por detrás mientras camina o está en idle, reproduce IfAttackBack y gira hacia el origen del golpe.
+5. Al recibir daño retrocede un poco por el golpe (el hombre lobo apenas se mueve) y durante 10 s sabe dónde estás aunque no te vea, así que va a por ti aunque le dispares de lejos. Si el golpe viene **por la espalda** (caminando, quieto o recuperándose de su ataque), reproduce la reacción, **se da la vuelta rápido** y en cuanto te encara **contraataca** si estás cerca o te persigue si no. También te nota si estás a 2,5 m o menos aunque sea detrás de él: se gira (dando pasos, sin deslizarse) y ataca solo cuando te tiene de frente. Los pasos van a la velocidad real del cuerpo, los cambios de animación seguidos no saltan de pose y los demás enemigos no le tapan la vista.
 6. Al morir reproduce Death, deja de atacar y desactiva su colisión. El cadáver se elimina después de 8 segundos.
 
 Selecciona `SPAWN_DUENDE` con **Gizmos** activado para ver el círculo de despertar y el sector frontal. Selecciona el duende durante Play para ver también el alcance de ataque. Los valores y clips se editan en `Assets/SO_/ForestGoblinSettings.asset`.

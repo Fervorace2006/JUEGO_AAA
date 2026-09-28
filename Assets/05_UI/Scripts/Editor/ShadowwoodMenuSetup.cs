@@ -14,6 +14,8 @@ namespace JuegoAAA.UI.Editor
     {
         const string MenuScene = "Assets/00_Scenes/MainMenu.unity";
         const string GameScene = "Assets/00_Scenes/ForestScene.unity";
+        // Inside of the cabin, loaded by the door at the end of the story.
+        const string CabinScene = "Assets/00_Scenes/InteriorHouse.unity";
         const string Rig = "Assets/VRTemplateAssets/Prefabs/Setup/Complete XR Origin Set Up Hands Variant.prefab";
         const string Background = "Assets/05_UI/Textures/ShadowwoodMenu.png";
         const string TitleFont = "Assets/05_UI/Resources/Fonts/CinzelDecorative-Bold.ttf";
@@ -26,7 +28,8 @@ namespace JuegoAAA.UI.Editor
             {
                 if (EditorApplication.isPlayingOrWillChangePlaymode) return;
                 if (!File.Exists(MenuScene)) Create();
-                else if (EditorBuildSettings.scenes.Length == 0 || EditorBuildSettings.scenes[0].path != MenuScene) AddToBuild();
+                else if (EditorBuildSettings.scenes.Length < 3 || EditorBuildSettings.scenes[0].path != MenuScene
+                    || System.Array.FindIndex(EditorBuildSettings.scenes, s => s.path == CabinScene) < 0) AddToBuild();
                 ApplyStartScene();
             };
         }
@@ -108,8 +111,9 @@ namespace JuegoAAA.UI.Editor
             var scenes = new List<EditorBuildSettingsScene>();
             scenes.Add(new EditorBuildSettingsScene(MenuScene, true));
             scenes.Add(new EditorBuildSettingsScene(GameScene, true));
+            if (File.Exists(CabinScene)) scenes.Add(new EditorBuildSettingsScene(CabinScene, true));
             foreach (var existing in EditorBuildSettings.scenes)
-                if (existing.path != MenuScene && existing.path != GameScene) scenes.Add(existing);
+                if (existing.path != MenuScene && existing.path != GameScene && existing.path != CabinScene) scenes.Add(existing);
             EditorBuildSettings.scenes = scenes.ToArray();
             AssetDatabase.SaveAssets();
         }

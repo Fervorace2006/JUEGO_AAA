@@ -74,9 +74,12 @@ namespace ForestVR.Editor
             Check(!actor.CanSeeTarget(),"Front vision cannot see behind");
             actor.Health.TakeHit(5,player.transform.position);
             Check(actor.CurrentState==GoblinActor.State.TurningFromHit,"Back hit triggers turn reaction");
-            until=Time.time+config.attackedFromBack.length+.3f; while(Time.time<until) yield return null;
+            until=Time.time+2; while(actor.CurrentState==GoblinActor.State.TurningFromHit&&Time.time<until) yield return null;
+            Check(actor.CurrentState!=GoblinActor.State.TurningFromHit,"Back-hit turn ends once facing the attacker");
             Check(actor.CanSeeTarget(),"Goblin turns toward attacker");
             Check(hp.Current==100,"No melee damage at long range");
+            for(int i=0;i<3;i++) yield return null;
+            Check(actor.CurrentState==GoblinActor.State.Walking,"Hurt goblin goes for the attacker");
             player.transform.position=actor.transform.position+actor.transform.forward*.8f;
             until=Time.time+4; while(actor.CurrentState!=GoblinActor.State.Attacking&&Time.time<until) yield return null;
             Check(actor.CurrentState==GoblinActor.State.Attacking,"Close target triggers attack");

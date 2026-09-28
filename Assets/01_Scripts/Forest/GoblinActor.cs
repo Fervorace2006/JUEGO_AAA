@@ -31,6 +31,12 @@ namespace ForestVR
         bool remembersTarget;
         int attackRepeats;
         float movedAt;
+        // After being hurt it knows where the player is for a while, even out of sight, and goes for them.
+        const float AggroSeconds = 10;
+        // Closer than this it notices the player even behind its back (it hears and smells them).
+        const float CloseAwareness = 2.5f;
+        float aggroUntil, turnStarted, lastHealth, animSpeed = 1;
+        Vector3 knockback;
         Transform hips;
         Vector3 hipsRest;
         public Health Health => health;
@@ -39,7 +45,7 @@ namespace ForestVR
         public void Initialize(GoblinSettings config, Transform playerHead, Health playerHealth)
         {
             settings = config; target = playerHead; targetHealth = playerHealth;
-            health = GetComponent<Health>(); health.Initialize(settings.health);
+            health = GetComponent<Health>(); health.Initialize(settings.health); lastHealth = health.Current;
             body = GetComponent<CharacterController>();
             health.Died += Die; health.Damaged += ReactToHit;
             if (animator == null) animator = GetComponentInChildren<Animator>();
@@ -68,7 +74,16 @@ namespace ForestVR
         void Play(AnimationClip clip, bool restart = false, float fade = 0.25f, float speed = 1)
         {
             if (!graph.IsValid() || clip == null || (!restart && currentClip == clip)) return;
-            if (previous.IsValid()) { graph.Disconnect(mixer, 1); graph.DestroyPlayable(previous); }
+            if (previous.IsValid())
+            {
+                // Changing again in the middle of a crossfade: keep whichever pose is showing most, drop the other,
+                // so the body does not jump back to a pose that had almost faded out.
+                graph.Disconnect(mixer, 1); graph.Disconnect(mixer, 0);
+                if (blend < .5f) { graph.DestroyPlayable(playing); playing = previous; }
+                else graph.DestroyPlayable(previous);
+                previous = default;
+                graph.Connect(playing, 0, mixer, 0);
+            }
             if (playing.IsValid()) { graph.Disconnect(mixer, 0); previous = playing; graph.Connect(previous, 0, mixer, 1); }
             playing = AnimationClipPlayable.Create(graph, clip);
             playing.SetApplyFootIK(false); playing.SetSpeed(speed);
@@ -76,6 +91,12 @@ namespace ForestVR
             currentClip = clip; fadeDuration = fade;
             blend = fade > 0 && previous.IsValid() ? 0 : 1;
             ApplyBlend();
+        }
+        // Looping movement clip at a playback speed that matches how fast the body really moves (no sliding feet).
+        void PlayAt(AnimationClip clip, float speed)
+        {
+            Play(clip);
+            if (clip != null && currentClip == clip && playing.IsValid()) playing.SetSpeed(speed);
         }
         void ApplyBlend()
         {
@@ -138,6 +159,12 @@ namespace ForestVR
             if (GroundSafety.IsLost(transform.position)) PlaceOnGround();
             verticalSpeed = body.isGrounded ? -2 : verticalSpeed + Physics.gravity.y * Time.deltaTime;
             body.Move(Vector3.up * (verticalSpeed * Time.deltaTime));
+            // Pushed back a little by each blow, stronger for light enemies.
+            if (knockback.sqrMagnitude > .0001f)
+            {
+                body.Move(knockback * Time.deltaTime);
+                knockback = Vector3.MoveTowards(knockback, Vector3.zero, Time.deltaTime * 6);
+            }
             if (target == null || targetHealth == null || targetHealth.IsDead || !target.gameObject.activeInHierarchy)
             { impactAt = -1; remembersTarget = false; if (CurrentState != State.Resting) Idle(); return; }
             var delta = Flat(target.position - transform.position);
@@ -151,8 +178,13 @@ namespace ForestVR
             { if (Time.time >= stateEnds) Idle(); return; }
             if (CurrentState == State.TurningFromHit)
             {
-                Face(lastKnown, settings.turnSpeed * 2);
-                if (Time.time >= stateEnds) Idle();
+                // Spins round toward whoever hit it, then goes straight for them: a blow if they are close, a chase if not.
+                Face(target.position, settings.turnSpeed * 3);
+                bool facing = InFront(delta, 40);
+                if (facing && Time.time - turnStarted > .35f || Time.time >= stateEnds)
+                {
+                    if (distance <= settings.attackRange && Time.time >= nextAttack) Attack(); else Idle();
+                }
                 return;
             }
             if (CurrentState == State.Attacking)
@@ -173,13 +205,18 @@ namespace ForestVR
                 if (Time.time >= stateEnds) Idle();
                 return;
             }
-            bool visible = CanSeeTarget();
-            if (visible)
+            // It knows where the player is if it sees them, if they are right next to it (even behind its back),
+            // or for a while after being hurt.
+            bool aware = CanSeeTarget() || (distance <= CloseAwareness && HasLineOfSight()) || Time.time < aggroUntil;
+            if (aware)
             { lastKnown = target.position; lastSeenAt = Time.time; remembersTarget = true; }
-            if (visible && distance <= settings.attackRange)
+            if (aware && distance <= settings.attackRange)
             {
-                Face(target.position, settings.turnSpeed);
-                if (Time.time >= nextAttack) Attack(); else Idle();
+                Face(target.position, settings.turnSpeed * 1.5f);
+                // Only swing once it faces the player; while turning in place its feet step instead of sliding.
+                if (InFront(delta, 70) && Time.time >= nextAttack) Attack();
+                else if (!InFront(delta, 30) && settings.walk != null) { CurrentState = State.Idle; PlayAt(settings.walk, .6f); }
+                else Idle();
                 return;
             }
             if (remembersTarget && Time.time - lastSeenAt <= settings.memorySeconds && Flat(lastKnown - transform.position).magnitude > 0.5f)
@@ -199,10 +236,14 @@ namespace ForestVR
                 if (CurrentState != State.Walking && CurrentState != State.Crawling) movedAt = Time.time;
                 CurrentState = wounded ? State.Crawling : State.Walking;
                 // Only fall back to idle after being blocked for a moment, so the walk cycle does not restart every frame.
-                if ((transform.position - before).sqrMagnitude > 0.000001f) movedAt = Time.time;
+                var moved = Flat(transform.position - before).magnitude;
+                if (moved > 0.001f) movedAt = Time.time;
                 var locomotion = wounded ? (running ? settings.woundedRun : settings.woundedWalk)
                     : (running ? settings.run : settings.walk);
-                Play(Time.time - movedAt < 0.25f ? locomotion : settings.idle);
+                // Steps follow the real speed: slower when squeezing past trees or slopes, never faster than 30 %.
+                float ratio = moveSpeed > 0 ? Mathf.Clamp(moved / Mathf.Max(Time.deltaTime, .001f) / moveSpeed, .6f, 1.3f) : 1;
+                animSpeed = Mathf.Lerp(animSpeed, ratio, 1 - Mathf.Exp(-8 * Time.deltaTime));
+                if (Time.time - movedAt < 0.25f) PlayAt(locomotion, animSpeed); else Idle();
             }
             else
             {
@@ -269,15 +310,27 @@ namespace ForestVR
         }
         void ReactToHit(Vector3 source)
         {
+            float damage = Mathf.Max(0, lastHealth - health.Current);
+            lastHealth = health.Current;
             if (health.IsDead) return;
-            bool behind = Vector3.Dot(transform.forward, Flat(source - transform.position).normalized) < -0.15f;
-            lastKnown = source; lastSeenAt = Time.time; remembersTarget = true;
+            // Hurt: it now knows where the player is and hunts them for a while, wherever the shot came from.
+            aggroUntil = Time.time + Mathf.Max(AggroSeconds, settings.memorySeconds);
+            lastKnown = target != null ? target.position : source; lastSeenAt = Time.time; remembersTarget = true;
+            // Recoil away from the blow; heavy enemies (the werewolf) barely move.
+            float weight = health.Maximum > 300 ? .3f : 1;
+            knockback = Flat(transform.position - source).normalized * (Mathf.Clamp(damage / health.Maximum * 8, .3f, 1.6f) * weight);
             if (CurrentState == State.Resting) { Wake(); return; }
-            if (behind && (CurrentState == State.Walking || CurrentState == State.Crawling || CurrentState == State.Idle))
+            bool behind = Vector3.Dot(transform.forward, Flat(source - transform.position).normalized) < -0.15f;
+            // A blow in the back makes it turn round and fight back — also while recovering from its own attack.
+            bool canTurn = CurrentState == State.Walking || CurrentState == State.Crawling || CurrentState == State.Idle
+                || CurrentState == State.Attacking && impactAt < 0;
+            if (behind && canTurn)
             {
-                impactAt = -1; CurrentState = State.TurningFromHit;
-                Play(settings.attackedFromBack != null ? settings.attackedFromBack : settings.idle, true);
-                stateEnds = Time.time + (settings.attackedFromBack != null ? settings.attackedFromBack.length : 1);
+                impactAt = -1; CurrentState = State.TurningFromHit; turnStarted = Time.time;
+                var clip = settings.attackedFromBack != null ? settings.attackedFromBack : settings.walk;
+                Play(clip != null ? clip : settings.idle, true, .15f, 1.2f);
+                // The turn ends as soon as it faces the player; this is only the longest it may take.
+                stateEnds = Time.time + Mathf.Min(clip != null ? clip.length / 1.2f : 1, 1.4f);
             }
         }
         static Vector3 Flat(Vector3 value) { value.y = 0; return value; }
@@ -302,6 +355,8 @@ namespace ForestVR
             {
                 var weapon = hit.collider.GetComponentInParent<WeaponGrip>();
                 if (weapon != null && weapon.Owner == targetHealth) continue;
+                // Other enemies do not hide the player.
+                if (hit.collider.GetComponentInParent<GoblinActor>() != null) continue;
                 if (!hit.transform.IsChildOf(transform) && !hit.transform.IsChildOf(targetHealth.transform)) return false;
             }
             return true;

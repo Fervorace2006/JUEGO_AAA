@@ -5,8 +5,8 @@ using UnityEngine.UI;
 
 namespace ForestVR
 {
-    // Story text for VR: chapter cards, typewritten narration and the current objective on a panel that gently
-    // follows the head (a panel locked to the head is tiring to read), plus a marker over the objective in the world.
+    // Story text for VR: chapter cards, typewritten narration and the current objective on a panel that stays still
+    // in front of the player and only recenters after a clear head turn, plus a marker over the objective in the world.
     // Everything is drawn over the scene so trees and hands never cover it.
     public sealed class StoryHud : MonoBehaviour
     {
@@ -49,18 +49,18 @@ namespace ForestVR
             Follow(true);
 
             titleGroup = Group("Chapter Card");
-            title = Label(titleGroup.transform, "Title", titleFont, 84, new Vector2(0, 130), new Vector2(1100, 120), Blood);
-            subtitle = Label(titleGroup.transform, "Subtitle", textFont, 44, new Vector2(0, 40), new Vector2(1100, 70), Bone);
+            title = Label(titleGroup.transform, "Title", titleFont, 100, new Vector2(0, 140), new Vector2(1100, 140), Blood);
+            subtitle = Label(titleGroup.transform, "Subtitle", textFont, 56, new Vector2(0, 30), new Vector2(1100, 80), Bone);
             titleGroup.alpha = 0;
 
             narrationGroup = Group("Narration");
             var back = new GameObject("Backing", typeof(RectTransform)).AddComponent<RawImage>();
-            Place(back.rectTransform, narrationGroup.transform, new Vector2(0, -200), new Vector2(1000, 190));
-            back.texture = Backing(); back.color = new Color(0, 0, 0, .8f); back.material = overlay; back.raycastTarget = false;
-            narration = Label(narrationGroup.transform, "Text", textFont, 36, new Vector2(0, -200), new Vector2(900, 170), Bone);
+            Place(back.rectTransform, narrationGroup.transform, new Vector2(0, -215), new Vector2(1100, 270));
+            back.texture = Backing(); back.color = new Color(0, 0, 0, .9f); back.material = overlay; back.raycastTarget = false;
+            narration = Label(narrationGroup.transform, "Text", textFont, 48, new Vector2(0, -215), new Vector2(1000, 240), Bone);
             narrationGroup.alpha = 0;
 
-            objective = Label(transform, "Objective", textFont, 28, new Vector2(0, 340), new Vector2(1000, 60), Bone);
+            objective = Label(transform, "Objective", textFont, 40, new Vector2(0, 345), new Vector2(1100, 70), Bone);
             objective.text = "";
 
             audioSource = gameObject.AddComponent<AudioSource>();
@@ -84,8 +84,12 @@ namespace ForestVR
             text.fontSize = size; text.color = color; text.alignment = TextAnchor.MiddleCenter;
             text.horizontalOverflow = HorizontalWrapMode.Wrap; text.verticalOverflow = VerticalWrapMode.Overflow;
             text.raycastTarget = false; text.material = overlay; text.lineSpacing = 1.1f;
+            // Heavier letters: bold, a dark outline all around, and a drop shadow so they read against any background.
+            text.fontStyle = FontStyle.Bold;
+            var outline = text.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0, 0, 0, 1); outline.effectDistance = new Vector2(2.5f, -2.5f);
             var shadow = text.gameObject.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0, 0, 0, .95f); shadow.effectDistance = new Vector2(2, -2);
+            shadow.effectColor = new Color(0, 0, 0, .8f); shadow.effectDistance = new Vector2(4, -4);
             return text;
         }
 
@@ -97,17 +101,26 @@ namespace ForestVR
 
         void LateUpdate() => Follow(false);
 
-        // Stays ahead of the eyes, catching up smoothly when the head turns.
+        // Stays still in front of the player while reading: it only moves when the head turns well away from it
+        // and then glides back in front and stops again.
+        const float RecenterAngle = 25;
+        Vector3 anchorForward;
+        bool recentering;
         void Follow(bool snap)
         {
             if (head == null) return;
             var forward = Vector3.ProjectOnPlane(head.forward, Vector3.up);
             if (forward.sqrMagnitude < .001f) forward = head.up;
             forward.Normalize();
-            var targetPosition = head.position + forward * Distance + Vector3.down * .05f;
-            var targetRotation = Quaternion.LookRotation(forward);
-            float k = snap ? 1 : 1 - Mathf.Exp(-4 * Time.deltaTime);
-            transform.SetPositionAndRotation(Vector3.Lerp(transform.position, targetPosition, k), Quaternion.Slerp(transform.rotation, targetRotation, k));
+            if (snap || anchorForward == Vector3.zero) anchorForward = forward;
+            if (Vector3.Angle(anchorForward, forward) > RecenterAngle) recentering = true;
+            if (recentering)
+            {
+                anchorForward = Vector3.Slerp(anchorForward, forward, 1 - Mathf.Exp(-5 * Time.deltaTime)).normalized;
+                if (Vector3.Angle(anchorForward, forward) < 2) recentering = false;
+            }
+            // It travels with the player, so walking or running never changes the reading distance.
+            transform.SetPositionAndRotation(head.position + anchorForward * Distance + Vector3.down * .05f, Quaternion.LookRotation(anchorForward));
         }
 
         // ---------- Story API ----------
