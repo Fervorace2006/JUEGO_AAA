@@ -91,12 +91,31 @@ namespace ForestVR
                 added = true;
             }
             foreach (var renderer in model.GetComponentsInChildren<Renderer>(true))
+            {
                 foreach (var material in renderer.materials)
                     if (material.HasProperty(CullId)) material.SetFloat(CullId, (float)UnityEngine.Rendering.CullMode.Off);
+                LimitDetail(renderer);
+            }
             // The interactable registered its colliders when it was enabled; register it again with the new ones.
             if (added && Grab.enabled) { Grab.enabled = false; Grab.enabled = true; }
         }
         static readonly int CullId = Shader.PropertyToID("_Cull");
+        const int MaxTriangles = 40000;
+        // The generated axe has almost a million triangles, more than the rest of the forest together: on the Quest the
+        // frame rate fell to 20-30 FPS and the view flickered while moving. Its model imports Mesh LODs (simplified
+        // versions); the weapon always draws the most detailed one within budget, on the table and in the hand.
+        static void LimitDetail(Renderer renderer)
+        {
+            var mesh = renderer is SkinnedMeshRenderer skinned ? skinned.sharedMesh
+                : renderer.TryGetComponent<MeshFilter>(out var filter) ? filter.sharedMesh : null;
+            if (mesh == null || mesh.lodCount <= 1) return;
+            for (int lod = 0; lod < mesh.lodCount; lod++)
+            {
+                long triangles = 0;
+                for (int sub = 0; sub < mesh.subMeshCount; sub++) triangles += mesh.GetLod(sub, lod).indexCount / 3;
+                if (triangles <= MaxTriangles || lod == mesh.lodCount - 1) { renderer.forceMeshLod = (short)lod; return; }
+            }
+        }
         public bool canProcess => isActiveAndEnabled;
         // Interactors without handedness (scripted or test hands) can hold any weapon. The other hand may pick up
         // a free bow, which is then handed over to the required hand; it cannot take the bow from that hand.

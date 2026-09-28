@@ -81,7 +81,8 @@ namespace JuegoAAA.VR
             flashlight.spotAngle = coneAngle;
             // A wide full-strength core so the sides are lit too, not just a round spot in the middle.
             flashlight.innerSpotAngle = coneAngle * 0.85f;
-            flashlight.shadows = LightShadows.Soft;
+            // Hard shadows: soft filtering over the whole lit view was too costly on the Quest.
+            flashlight.shadows = LightShadows.Hard;
             flashlight.shadowStrength = 1f;
             flashlight.shadowBias = 0.025f;
             flashlight.shadowNormalBias = 0.15f;

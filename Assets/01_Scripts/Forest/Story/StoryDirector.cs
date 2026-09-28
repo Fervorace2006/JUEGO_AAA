@@ -22,7 +22,7 @@ namespace ForestVR
         readonly HashSet<GoblinActor> watched = new HashSet<GoblinActor>();
         readonly HashSet<string> dropped = new HashSet<string>();
         readonly List<GoblinActor> living = new List<GoblinActor>();
-        bool narrating, deathLineSaid;
+        bool narrating;
         CabinLight cabinLight;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -237,14 +237,9 @@ namespace ForestVR
             yield return Say(line);
         }
 
-        // Death ends the run (PlayerCombatStatus goes back to the menu): stop telling the story.
-        void OnPlayerDied()
-        {
-            if (deathLineSaid) return;
-            deathLineSaid = true;
-            StopAllCoroutines();
-            if (hud != null) { hud.SetObjective("", false); hud.SetMarker(null); }
-        }
+        // Death no longer ends the run: REINTENTAR (PlayerCombatStatus) revives the player on the spot, so the story
+        // keeps going and its objective stays where it was.
+        void OnPlayerDied() { }
 
         // ---------- Ambience ----------
 

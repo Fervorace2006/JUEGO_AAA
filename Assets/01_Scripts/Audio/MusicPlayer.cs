@@ -8,6 +8,8 @@ namespace ForestVR
         static MusicPlayer instance;
         AudioSource current, previous;
         float fadeSeconds = 3;
+        // Track playing now (null when silent), so it can be resumed after a pause in the music.
+        public AudioClip Clip => current != null ? current.clip : null;
 
         public static MusicPlayer Instance
         {
