@@ -237,11 +237,13 @@ namespace ForestVR
             yield return Say(line);
         }
 
+        // Death ends the run (PlayerCombatStatus goes back to the menu): stop telling the story.
         void OnPlayerDied()
         {
             if (deathLineSaid) return;
             deathLineSaid = true;
-            StartCoroutine(Aside("Todavía no. Mateo te necesita. Levántate."));
+            StopAllCoroutines();
+            if (hud != null) { hud.SetObjective("", false); hud.SetMarker(null); }
         }
 
         // ---------- Ambience ----------

@@ -124,9 +124,9 @@ Las flechas que se clavan en objetos estirados (el suelo `FloorWithLake` está e
 
 La linterna se mantiene como estaba (cono de 110°, intensidad 8, alcance 40 m, niebla 0,025). El perfil URP "Performance" del proyecto ilumina cada objeto (el suelo entero es uno) con una única luz extra, así que la luz de las flechas tiene prioridad baja y nunca le quita la linterna al suelo. La barra de vida del jugador está en la esquina inferior izquierda.
 
-## Vida, muerte y recuperacion
+## Vida y muerte
 
-La vida del jugador es una barra verde en la esquina inferior izquierda de la vista (`HudHealthBar`, hija de la camara y dibujada encima de la escena) que se acorta al recibir dano. Cuando llega a cero, el duende deja de atacar y las armas dejan de hacer dano: no es un bloqueo de la IA. Ahora aparece el aviso **Sin vida**. Pulsa **A o X** en los controles para recuperar la vida y seguir la prueba; en el editor/simulador tambien funciona **F8**. Esta accion solo funciona estando muerto y no reinicia la escena ni revive al duende.
+La vida y el aliento se ven en `PlayerHud`, abajo al centro de la vista. Al morir ya no aparece el aviso «Sin vida» ni se puede recuperar la vida: la vista se tiñe de rojo, se funde a negro con **HAS MUERTO** (2,5 s + 1,5 s) y el juego vuelve al menú de inicio; **JUGAR** empieza la historia desde el principio. Si el menú no está en Build Settings, se reinicia la escena actual. Lo hace `PlayerCombatStatus`.
 
 ## Jugador utilizado
 

@@ -125,7 +125,7 @@ namespace JuegoAAA.UI
                 "Hacha: golpea con fuerza\n" +
                 "Joystick: moverse y girar\n" +
                 "Clic en el joystick izquierdo: correr (gasta aliento)\n" +
-                "A / X: recuperar la vida al morir\n\n" +
+                "Si mueres, vuelves al menú y empiezas de nuevo\n\n" +
                 "Los duendes duermen. No te acerques demasiado.",
                 textFont, 32, 318, 290, 900, 400, TextAnchor.UpperLeft).lineSpacing = 1.15f;
             AddButton("VOLVER", (RectTransform)controlsGroup.transform, 768, 740, () => ShowControls(false));
