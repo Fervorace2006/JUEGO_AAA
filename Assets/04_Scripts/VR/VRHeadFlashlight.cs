@@ -11,7 +11,7 @@ namespace JuegoAAA.VR
     {
         [SerializeField, Min(0f)] float intensity = 8f;
         [SerializeField, Min(1f)] float range = 40f;
-        [SerializeField, Range(1f, 179f)] float coneAngle = 110f;
+        [SerializeField, Range(1f, 179f)] float coneAngle = 130f;
         [SerializeField] Color lightColor = new Color(1f, 0.94f, 0.82f);
         [SerializeField] Vector3 headOffset = new Vector3(0f, 0.08f, 0.06f);
         Light flashlight;
@@ -79,7 +79,8 @@ namespace JuegoAAA.VR
             flashlight.intensity = intensity;
             flashlight.range = range;
             flashlight.spotAngle = coneAngle;
-            flashlight.innerSpotAngle = coneAngle * 0.55f;
+            // A wide full-strength core so the sides are lit too, not just a round spot in the middle.
+            flashlight.innerSpotAngle = coneAngle * 0.85f;
             flashlight.shadows = LightShadows.Soft;
             flashlight.shadowStrength = 1f;
             flashlight.shadowBias = 0.025f;

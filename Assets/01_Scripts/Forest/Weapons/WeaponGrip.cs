@@ -66,7 +66,37 @@ namespace ForestVR
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             spawnPosition = transform.position; spawnRotation = transform.rotation;
             if (heldScale <= 0) heldScale = 1;
+            MakeSolid();
         }
+        // The prefab only has a small box around the handle: the weapon sank into the table and could only be grabbed
+        // there. Every mesh of the model gets a box collider around it (the whole weapon rests on surfaces and can be
+        // grabbed anywhere; it still snaps to the grip), and its faces are drawn from both sides: the generated models
+        // have one-sided faces that looked see-through from some angles.
+        // Boxes, not convex mesh colliders: the generated models have millions of triangles and cooking their hull
+        // froze the Quest for minutes while ForestScene loaded.
+        void MakeSolid()
+        {
+            var model = Grab.predictedVisualsTransform;
+            if (model == null || model == transform) return;
+            bool added = false;
+            foreach (var filter in model.GetComponentsInChildren<MeshFilter>(true))
+            {
+                var mesh = filter.sharedMesh;
+                if (mesh == null || filter.GetComponent<Collider>() != null) continue;
+                filter.gameObject.layer = gameObject.layer;
+                var collider = filter.gameObject.AddComponent<BoxCollider>();
+                collider.center = mesh.bounds.center;
+                collider.size = mesh.bounds.size;
+                Grab.colliders.Add(collider);
+                added = true;
+            }
+            foreach (var renderer in model.GetComponentsInChildren<Renderer>(true))
+                foreach (var material in renderer.materials)
+                    if (material.HasProperty(CullId)) material.SetFloat(CullId, (float)UnityEngine.Rendering.CullMode.Off);
+            // The interactable registered its colliders when it was enabled; register it again with the new ones.
+            if (added && Grab.enabled) { Grab.enabled = false; Grab.enabled = true; }
+        }
+        static readonly int CullId = Shader.PropertyToID("_Cull");
         public bool canProcess => isActiveAndEnabled;
         // Interactors without handedness (scripted or test hands) can hold any weapon. The other hand may pick up
         // a free bow, which is then handed over to the required hand; it cannot take the bow from that hand.
