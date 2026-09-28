@@ -148,6 +148,11 @@ namespace ForestVR.Editor
             var edgeTarget=Target(axe.blade.position); Physics.SyncTransforms();
             until=Time.time+.12f; while(Time.time<until) { right.transform.position+=Vector3.forward*(2f*Time.deltaTime); yield return null; }
             Check(Mathf.Abs(edgeTarget.Current-60)<.1f,"Blade point already touching an enemy deals 40 damage when swung; health="+edgeTarget.Current+" blade="+axe.blade.position);
+            until=Time.time+.8f; while(Time.time<until) yield return null;
+            Check(Mathf.Abs(edgeTarget.Current-60)<.1f,"Resting on the enemy does not repeat axe damage");
+            until=Time.time+.8f; while(Time.time<until) { right.transform.position-=Vector3.forward*(.8f*Time.deltaTime); yield return null; }
+            until=Time.time+.8f; while(Time.time<until) { right.transform.position+=Vector3.forward*(.8f*Time.deltaTime); yield return null; }
+            Check(Mathf.Abs(edgeTarget.Current-20)<.1f,"A second slow swing after separating deals one more 40 damage; health="+edgeTarget.Current);
             right.EndManualInteraction(); UnityEngine.Object.Destroy(axe.gameObject); UnityEngine.Object.Destroy(edgeTarget.gameObject);
 
             player.transform.position=new Vector3(40,0,0);

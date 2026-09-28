@@ -15,6 +15,8 @@ namespace ForestVR
         public Transform[] spawnPoints = new Transform[0];
         [Tooltip("Aparecer exactamente en el empty elegido, sin dispersarse alrededor.")]
         public bool spawnExactlyAtPoints;
+        [System.NonSerialized] public bool stopRespawning;
+        public event System.Action<GoblinActor> Spawned;
         GoblinActor current;
         Health playerHealth;
         Transform head;
@@ -25,11 +27,28 @@ namespace ForestVR
         sealed class MapSlot { public Vector3 position; public Quaternion rotation; public GoblinActor actor; public bool spawned; public double readyAt; }
         readonly List<MapSlot> mapSlots = new List<MapSlot>();
         bool populationPlaced;
+        bool initialWaveFilled;
+        bool initialSingleSpawned;
         // Set at runtime by the story to pace a chapter; negative uses the settings value.
         [System.NonSerialized] public float respawnOverride = -1;
         public float RespawnSeconds => respawnOverride >= 0 ? respawnOverride : settings.respawnSeconds;
+        public int EncounterCount
+        {
+            get
+            {
+                if (zones.Count == 0) return settings != null ? Mathf.Max(1, settings.maxAlive) : 0;
+                int total = 0;
+                foreach (var z in zones) if (z.zone != null && z.zone.isActiveAndEnabled) total += z.zone.count;
+                return total;
+            }
+        }
+        public bool InitialWaveReady => zones.Count > 0 ? zones.TrueForAll(z => z.filled)
+            : settings != null && settings.maxAlive > 1 ? initialWaveFilled : initialSingleSpawned;
         // Lets the next enemy appear right away (used when a chapter starts).
-        public void ResetCooldown() { readyAt = 0; foreach (var slot in mapSlots) slot.readyAt = 0; }
+        public void ResetCooldown() { readyAt = 0; foreach (var slot in mapSlots) slot.readyAt = 0; foreach (var z in zones) z.nextAt = 0; }
+        // Round spawn zones (a SpawnZone on a spawn point): each one keeps its own count of enemies inside its circle.
+        sealed class ZoneState { public SpawnZone zone; public readonly List<GoblinActor> alive = new List<GoblinActor>(); public double nextAt; public bool filled; }
+        readonly List<ZoneState> zones = new List<ZoneState>();
         public double RemainingSeconds => System.Math.Max(0, readyAt - Time.timeAsDouble);
         void Start()
         {
@@ -39,12 +58,21 @@ namespace ForestVR
             if (playerHealth == null) playerHealth = player.gameObject.AddComponent<Health>();
             var camera = player.GetComponentInChildren<Camera>(true);
             head = camera != null ? camera.transform : player;
+            if (spawnPointsRoot != null) foreach (Transform point in spawnPointsRoot) AddZone(point);
+            foreach (var point in spawnPoints) AddZone(point);
+        }
+        void AddZone(Transform point)
+        {
+            var zone = point != null ? point.GetComponent<SpawnZone>() : null;
+            if (zone != null && !zones.Exists(z => z.zone == zone)) zones.Add(new ZoneState { zone = zone });
         }
         void Update()
         {
             if (playerHealth == null || playerHealth.IsDead || !player.gameObject.activeInHierarchy) return;
             UpdatePopulation();
+            if (zones.Count > 0) { UpdateZones(); return; }
             if (settings.maxAlive > 1) { UpdateWaves(); return; }
+            if (stopRespawning && initialSingleSpawned) return;
             // Unexpected removal also starts the cooldown rather than spawning immediately.
             if (waitingForDeath)
             {
@@ -60,14 +88,65 @@ namespace ForestVR
             var instance = Instantiate(goblinPrefab, chosen.position, chosen.rotation);
             current = instance.GetComponent<GoblinActor>();
             current.Initialize(settings, head, playerHealth);
+            Spawned?.Invoke(current);
+            initialSingleSpawned = true;
             waitingForDeath = true;
             current.Health.Died += BeginCooldown;
+        }
+        // Zones start full; each dead one is replaced, one at a time, respawn seconds after the zone went short.
+        void UpdateZones()
+        {
+            double now = Time.timeAsDouble;
+            foreach (var z in zones)
+            {
+                if (z.zone == null || !z.zone.isActiveAndEnabled) continue;
+                z.alive.RemoveAll(a => a == null || a.Health == null || a.Health.IsDead);
+                if (z.alive.Count >= z.zone.count) { z.nextAt = -1; continue; }
+                if (!z.filled)
+                {
+                    bool full = true;
+                    for (int i = z.alive.Count; i < z.zone.count; i++) if (!SpawnInZone(z)) { full = false; break; }
+                    z.filled = full; z.nextAt = -1;
+                    continue;
+                }
+                if (stopRespawning) continue;
+                if (z.nextAt < 0) { z.nextAt = now + RespawnSeconds; continue; }
+                if (now < z.nextAt) continue;
+                SpawnInZone(z);
+                z.nextAt = z.alive.Count < z.zone.count ? now + RespawnSeconds : -1;
+            }
+        }
+        bool SpawnInZone(ZoneState z)
+        {
+            var center = z.zone.transform.position;
+            float radius = z.zone.radius;
+            for (int attempt = 0; attempt < 60; attempt++)
+            {
+                // Uniform over the disc, so the edge of the circle is not left empty.
+                var p = Random.insideUnitCircle * radius;
+                var probe = center + new Vector3(p.x, 0, p.y);
+                if (!PlayArea.TryGetWalkableGround(probe, out var ground)) continue;
+                bool crowded = false;
+                foreach (var other in z.alive) if (other != null && FlatDistance(other.transform.position, ground) < z.zone.spacing) { crowded = true; break; }
+                if (crowded) continue;
+                // Never right on top of the player, and with room for the body (trunks, rocks, tables).
+                if (FlatDistance(head.position, ground) < Mathf.Min(6, radius * .5f)) continue;
+                if (Physics.CheckCapsule(ground + Vector3.up * .7f, ground + Vector3.up * 1.4f, .35f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) continue;
+                var rotation = Quaternion.Euler(0, Random.Range(0f, 360f), 0);
+                var actor = Instantiate(goblinPrefab, ground + Vector3.up * .05f, rotation).GetComponent<GoblinActor>();
+                actor.Initialize(settings, head, playerHealth);
+                z.alive.Add(actor);
+                Spawned?.Invoke(actor);
+                return true;
+            }
+            return false;
         }
         // Timed spawning: one more every respawnSeconds (the first right away) while fewer than maxAlive are alive.
         void UpdateWaves()
         {
             alive.RemoveAll(a => a == null || a.Health == null || a.Health.IsDead);
-            if (Time.timeAsDouble < readyAt || alive.Count >= settings.maxAlive) return;
+            if (stopRespawning && initialWaveFilled) return;
+            if ((!stopRespawning && Time.timeAsDouble < readyAt) || alive.Count >= settings.maxAlive) return;
             candidates.Clear();
             if (spawnPointsRoot != null) foreach (Transform point in spawnPointsRoot) AddCandidate(point);
             foreach (var point in spawnPoints) AddCandidate(point);
@@ -85,7 +164,9 @@ namespace ForestVR
             var actor = Instantiate(goblinPrefab, position, chosen.rotation).GetComponent<GoblinActor>();
             actor.Initialize(settings, head, playerHealth);
             alive.Add(actor);
-            readyAt = Time.timeAsDouble + RespawnSeconds;
+            Spawned?.Invoke(actor);
+            if (stopRespawning && alive.Count >= settings.maxAlive) initialWaveFilled = true;
+            readyAt = stopRespawning ? 0 : Time.timeAsDouble + RespawnSeconds;
         }
         void AddCandidate(Transform point)
         {
@@ -106,11 +187,13 @@ namespace ForestVR
             foreach (var slot in mapSlots)
             {
                 if (slot.actor != null) continue;
+                if (stopRespawning && slot.spawned) continue;
                 if (slot.spawned) { slot.spawned = false; slot.readyAt = Time.timeAsDouble + RespawnSeconds; }
                 if (Time.timeAsDouble < slot.readyAt || FlatDistance(head.position, slot.position) < settings.populationMinPlayerDistance) continue;
                 slot.actor = Instantiate(goblinPrefab, slot.position, slot.rotation).GetComponent<GoblinActor>();
                 slot.actor.Initialize(settings, head, playerHealth);
                 slot.spawned = true;
+                Spawned?.Invoke(slot.actor);
             }
         }
         void PlacePopulation(Bounds area)

@@ -230,6 +230,8 @@ namespace ForestVR
         }
         bool Blocked(Vector3 bottom, Vector3 top, float radius, Vector3 direction)
         {
+            // The lake and the edges of the map are off limits for enemies too.
+            if (!PlayArea.IsWalkable(transform.position + direction * 1.2f) && PlayArea.IsWalkable(transform.position)) return true;
             int count = Physics.CapsuleCastNonAlloc(bottom, top, radius, direction, steerHits, 0.9f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < count; i++)
             {
@@ -310,6 +312,7 @@ namespace ForestVR
             // The corpse has no collision or gravity: leave it lying on the ground, not floating or under it.
             if (GroundSafety.IsLost(transform.position)) PlaceOnGround(); else DropToFloorBelow();
             body.enabled = false;
+            if (settings.dropsPages) PagePickup.TryDrop(transform.position + transform.forward * .5f, settings.pagePrefab);
             Play(settings.death, true);
             Destroy(gameObject, Mathf.Max(settings.corpseSeconds, settings.death != null ? settings.death.length : 0));
         }

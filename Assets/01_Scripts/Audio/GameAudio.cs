@@ -23,6 +23,8 @@ namespace ForestVR
         [Tooltip("Whispers that come now and then from somewhere around the player.")]
         public AudioClip whispers;
         public Vector2 whisperInterval = new Vector2(45, 100);
+        [Tooltip("Sonido al recoger una pagina del diario (opcional).")]
+        public AudioClip pagePickup;
         [Header("Volumen")]
         [Range(0, 1)] public float musicVolume = .35f;
         [Range(0, 1)] public float effectsVolume = 1;

@@ -61,7 +61,7 @@ Las armas se agarran siempre hacia la mano, aunque se tomen con el rayo a distan
 |---|---:|---|
 | Revólver | 150 | Un impacto mata al duende con 100 de vida. |
 | Arco | Hasta 100 | Daño y velocidad aumentan con la tensión de la cuerda (máxima en `Pull End`). |
-| Hacha | 40 | Requiere un golpe de al menos 1,2 m/s; el filo también alcanza enemigos que ya estaban en contacto al empezar el movimiento. Breve espera entre impactos. |
+| Hacha | 40 | El filo hace daño tras recorrer una distancia al golpear; mantenerlo apoyado no repite el daño. Hay que separarlo y dar otro hachazo para volver a golpear, respetando la breve espera entre impactos. |
 
 Los ajustes están en `Assets/SO_/Weapons`. Los cinco prefabs están en `Assets/02_Prefabs/Weapons`: VRBow, VRAxe, VRRevolver, Arrow y Bullet. Los modelos originales permanecen en TripoModels. La cuerda es un LineRenderer de Unity con tres puntos y un agarre independiente. El cuerpo del arco permanece rígido porque el modelo no tiene huesos para doblar las palas. Se revisó el ejemplo `VR-Archery-in-Unity-2022-main` que dejaste en la raiz del proyecto; el arco del juego conserva su implementacion compatible con el XR Interaction Toolkit actual y toma la distancia de estiramiento al soltar la cuerda.
 
@@ -86,6 +86,16 @@ Estados según sus animaciones:
 - **Hombre Lobo:** en reposo `WolfIdle`; persigue con `wolfwalk` (1,8 m/s) o `WolfRun` (5 m/s), ataca con `WolfAttack`, si lo golpean por la espalda se gira con `wolf Right Turn 90` y muere con `wolfdied`. Nunca hay más de un lobo.
 
 Prefabs: `Assets/02_Prefabs/Enemy/ForestZombie.prefab` y `ForestWerewolf.prefab`. Los spawners y sus dos puntos están guardados en ForestScene. Puedes mover los empties; no se generan puntos alternativos. Al seleccionarlos, sus gizmos muestran el radio de detección y el cono de visión. El menú **Forest VR > Enemigos > Crear zombie y hombre lobo y colocarlos en la escena** reutiliza esos puntos y no crea otros si faltan.
+
+## Recorrido, zonas de spawn, páginas y puerta
+
+- **Recorrido:** MESA 1 (inicio del jugador) tiene el hacha; MESA 2 el arco; MESA 3 el revólver. La historia (`StoryDirector`) sigue ese orden: hacha y páginas de los duendes → arco y zombis → revólver y Hombre Lobo → entrar en la cabaña.
+- **Zonas de spawn (`SpawnZone`):** en cada punto de spawn (SPAWN_DUENDE, Spawn Zombie, Spawn Wolf) se configuran `radius` (radio del círculo) y `count` (cuántos enemigos). Aparecen dentro del círculo, separados (`spacing`), solo sobre suelo verde, nunca en el agua ni fuera del mapa, ni encima del jugador. Un enemigo muerto se repone tras el tiempo de reaparición. Se ven en el editor como círculos celestes con la etiqueta "Zona: N x Enemigo". Para más zonas del mismo enemigo, añade otro empty con `SpawnZone` a la lista `Spawn Points` de su spawner. Los duendes ya no se reparten por todo el mapa (`mapPopulation` 0): solo salen de sus zonas.
+- **Agua y bordes (`PlayArea`, `PlayAreaGuard`):** el jugador no puede entrar en el lago ni salir de los bordes de `FloorWithLake`; se le devuelve al último sitio válido y aparece "No deberías pasar por ahí.". Los enemigos también evitan el agua al perseguir.
+- **Páginas (`PagePickup`):** cada duende que muere suelta una página mientras falten (3). Flota sobre el suelo sin caer, brilla y se recoge al pasar por encima; el objetivo cuenta (n/3). El modelo final se asigna en `ForestGoblinSettings` > Page Prefab (vacío = hoja provisional). Sonido opcional en `GameAudio` > Page Pickup.
+- **Hacha:** el punto de daño (`Blade Hit Point` del prefab VRAxe) está en el centro del filo; antes estaba fuera de la hoja, junto al mango.
+- **Puerta de la cabaña (`SceneDoor`):** el empty `Puerta Cabaña` está en el porche (lado este de Casita Final). Cerrada hasta el final de la historia; al entrar carga `InteriorHouse`. Para las builds, añade InteriorHouse en File > Build Profiles (en el editor funciona igual).
+- Menú **Forest VR > Recorrido > Colocar armas, zonas de spawn y puerta de la cabaña**: vuelve a hacer esta preparación en la escena abierta sin duplicar nada.
 
 ## Preparación automática de ForestScene
 

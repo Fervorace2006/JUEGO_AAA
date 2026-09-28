@@ -29,7 +29,7 @@ MonoBehaviour:
   respawnSeconds: 300
   maxAlive: 3
   zoneRadius: 500
-  mapPopulation: 10
+  mapPopulation: 0
   populationSpacing: 12
   populationMinPlayerDistance: 20
   corpseSeconds: 8
@@ -57,3 +57,5 @@ MonoBehaviour:
   voiceVolume: 1
   voicePitch: {x: 1, y: 1.15}
   hearingDistance: 25
+  dropsPages: 0
+  pagePrefab: {fileID: 0}

@@ -51,6 +51,11 @@ namespace ForestVR
         public string displayName = "Duende";
         public Color healthBarColor = new Color(.16f, .85f, .25f);
         [Min(0.1f)] public float nameplateScale = 1;
+        [Header("Paginas del diario")]
+        [Tooltip("Al morir suelta una pagina del diario mientras la historia necesite paginas (los duendes).")]
+        public bool dropsPages;
+        [Tooltip("Modelo de la pagina. Vacio = una hoja generada provisional.")]
+        public GameObject pagePrefab;
         [Header("Sonidos")]
         [Tooltip("Loops while it sleeps or rests (snoring, breathing).")]
         public AudioClip sleepLoop;

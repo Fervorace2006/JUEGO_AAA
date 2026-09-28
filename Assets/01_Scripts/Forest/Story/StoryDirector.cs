@@ -6,15 +6,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace ForestVR
 {
-    // SHADOWWOOD — the story of the forest, told in chapters that drive the game:
-    //   Prologue      Mateo vanished three nights ago. Take the hunter's weapons from the table.
-    //   I   Sleepers  Reach the lit cabin without waking the goblins (they only wake if you get very close).
-    //   II  Diary     The goblins stole the diary pages that tell how to break the curse: kill 3 goblins.
-    //   III Restless  Spilled blood wakes the dead: zombies rise without pause until 5 of them fall.
-    //   IV  Blood moon The hunter himself is the werewolf. Kill him.
-    //   Dawn          The dead return to the earth, Mateo is alive, back to the menu.
-    // Each chapter switches the enemy spawners on or off, changes how fast they come back, darkens or lights the night,
-    // and points the objective marker at the place or the nearest enemy to deal with.
+    // Mateo's three notebook fragments are carried by the last enemy in each fixed encounter.
     public sealed class StoryDirector : MonoBehaviour
     {
         const string Goblin = "Duende", Zombie = "Zombie", Werewolf = "Hombre Lobo";
@@ -27,6 +19,7 @@ namespace ForestVR
         readonly Dictionary<string, GoblinSpawner> spawners = new Dictionary<string, GoblinSpawner>();
         readonly Dictionary<string, int> kills = new Dictionary<string, int>();
         readonly HashSet<GoblinActor> watched = new HashSet<GoblinActor>();
+        readonly HashSet<string> dropped = new HashSet<string>();
         readonly List<GoblinActor> living = new List<GoblinActor>();
         bool narrating, deathLineSaid;
 
@@ -51,8 +44,15 @@ namespace ForestVR
             Current = this;
             // Before any spawner runs its first frame: the dead and the beast wait for their chapter,
             // the goblins already sleep in the forest.
+            PagePickup.ResetCount();
+            PagePickup.Required = 3;
             foreach (var spawner in FindObjectsByType<GoblinSpawner>())
-                if (spawner.settings != null) spawners[spawner.settings.displayName] = spawner;
+                if (spawner.settings != null)
+                {
+                    spawners[spawner.settings.displayName] = spawner;
+                    spawner.stopRespawning = true;
+                    spawner.Spawned += Watch;
+                }
             SetSpawner(Zombie, false);
             SetSpawner(Werewolf, false);
         }
@@ -60,6 +60,7 @@ namespace ForestVR
         {
             if (Current == this) Current = null;
             if (player != null) player.Died -= OnPlayerDied;
+            foreach (var spawner in spawners.Values) if (spawner != null) spawner.Spawned -= Watch;
             if (hud != null) Destroy(hud.gameObject);
         }
 
@@ -83,92 +84,81 @@ namespace ForestVR
         IEnumerator Story()
         {
             yield return new WaitForSeconds(2.5f);
-
             // ---------- Prologue ----------
             Chapter = 0;
             yield return hud.ChapterCard("Shadowwood", "Prólogo · Tres noches");
             yield return Say(
                 "Hace tres noches que Mateo, tu hermano, entró en Shadowwood. No volvió.",
-                "Su linterna apareció aquí, junto a la mesa del viejo cazador Elías Varga... apagada.",
-                "El cazador dejó sus armas sobre la mesa. Vas a necesitarlas.");
-            hud.SetObjective("Toma un arma de la mesa del cazador");
-            hud.SetMarker(AnchorOn("MESA", "Mesa del cazador"), .6f);
-            while (!HoldingWeapon()) yield return null;
+                "Sus notas quedaron dispersas entre las criaturas del bosque.",
+                "Encuentra las tres piezas de su libreta para seguir su rastro.");
 
-            // ---------- I ----------
+            // ---------- I: the goblins and the diary pages ----------
             Chapter = 1;
             hud.SetObjective("");
             hud.SetMarker(null);
-            yield return hud.ChapterCard("Capítulo I", "Los que duermen");
+            yield return hud.ChapterCard("Capítulo I", "Las páginas robadas");
             yield return Say(
-                "Los duendes duermen entre los árboles. Solo despiertan si te acercas demasiado.",
-                "En la cabaña del cazador hay luz. Alguien la ha encendido esta noche.");
-            hud.SetObjective("Llega a la cabaña sin despertar a los duendes");
-            var cabin = AnchorOn("Casita (1)", "Cabana del cazador");
-            hud.SetMarker(cabin, 1.2f);
-            bool warned = false;
-            while (cabin != null && FlatDistance(head.position, cabin.position) > CabinReach(cabin))
-            {
-                if (!warned && AnyAwake(Goblin)) { warned = true; StartCoroutine(Aside("Te han oído. Muévete, o pelea.")); }
-                yield return null;
-            }
-
-            // ---------- II ----------
-            Chapter = 2;
-            hud.SetMarker(null);
-            hud.SetObjective("");
-            yield return hud.ChapterCard("Capítulo II", "El diario del cazador");
-            yield return Say(
-                "La puerta está abierta. Sobre la mesa, el diario de Elías, con páginas arrancadas.",
-                "«Los duendes se llevaron las páginas que dicen cómo romper la maldición. Las guardan en sus harapos.»",
-                "Sin esas páginas no sabrás qué le pasó a Mateo.");
+                "Los duendes guardan la primera pieza de la libreta de Mateo.",
+                "Elimínalos a todos y busca la pieza en el último que caiga.");
             Night.Darken(.25f, 10);
-            yield return KillObjective(Goblin, 3, "Recupera las páginas: elimina duendes", 1.9f,
-                n => n < 3 ? "Una página manchada de sangre. «...la luna llena...»" : null);
+            yield return EncounterAndPage(Goblin, 1, "Elimina a todos los duendes y consigue la primera pieza");
 
-            // ---------- III ----------
-            Chapter = 3;
+            // ---------- II: second table, the bow, the dead ----------
+            Chapter = 2;
             hud.SetMarker(null);
             hud.SetObjective("");
             Whisper(3);
             yield return Say(
-                "La última página tiembla en tus manos: «Cuando la sangre del bosque se derrama, los muertos despiertan».",
-                "Detrás de ti, la tierra se abre.");
-            yield return hud.ChapterCard("Capítulo III", "Los que no descansan");
-            // The dead keep coming, a few at a time, until the chapter is over.
-            SetSpawner(Zombie, true, 6);
+                "La primera nota de Mateo señala a los muertos más adelante.",
+                "Antes de ir, recoge el arco de la segunda mesa.");
+            yield return hud.ChapterCard("Capítulo II", "Los que no descansan");
+            hud.SetObjective("Toma el arco de la segunda mesa");
+            hud.SetMarker(AnchorOn("MESA 2", "Segunda mesa"), .6f);
+            while (!Holding<VRBow>()) yield return null;
+            hud.SetMarker(null);
+            SetSpawner(Zombie, true);
             Night.Darken(.5f, 12);
-            yield return KillObjective(Zombie, 5, "Sobrevive a los muertos: elimina zombis", 2.2f,
-                n => n == 2 ? "Siguen saliendo de la tierra. No dejes que te rodeen." : null);
+            yield return EncounterAndPage(Zombie, 2, "Elimina a todos los zombis y consigue la segunda pieza");
             SetSpawner(Zombie, false);
 
-            // ---------- IV ----------
-            Chapter = 4;
+            // ---------- III: third table, the revolver, the werewolf ----------
+            Chapter = 3;
             hud.SetMarker(null);
             hud.SetObjective("");
             yield return Say(
-                "El bosque se queda en silencio. Un aullido rompe la noche.",
-                "Otra página, escrita con una letra que ya no parece humana:",
-                "«Si lees esto, ya no soy un hombre. Mateo está a salvo en el sótano de la cabaña. Mátame antes de que lo recuerde.» — E. Varga");
+                "La segunda nota de Mateo habla de un aullido junto a la cabaña.",
+                "Ve a la tercera mesa y toma el revólver antes de buscar al lobo.");
             Night.BloodMoon(8);
             if (GameAudio.Get != null) GameAudio.Music(GameAudio.Get.bossMusic, 4);
-            yield return hud.ChapterCard("Capítulo IV", "Luna de sangre");
-            SetSpawner(Werewolf, true, 99999);
-            yield return KillObjective(Werewolf, 1, "Acaba con el Hombre Lobo", 3.2f, null);
+            yield return hud.ChapterCard("Capítulo III", "Luna de sangre");
+            hud.SetObjective("Toma el revólver de la tercera mesa");
+            hud.SetMarker(AnchorOn("MESA 3", "Tercera mesa"), .6f);
+            while (!Holding<VRRevolver>()) yield return null;
+            hud.SetMarker(null);
+            SetSpawner(Werewolf, true);
+            yield return EncounterAndPage(Werewolf, 3, "Elimina al Hombre Lobo y consigue la última pieza");
             SetSpawner(Werewolf, false);
 
-            // ---------- Dawn ----------
-            Chapter = 5;
+            // ---------- Dawn: into the cabin ----------
+            Chapter = 4;
             hud.SetMarker(null);
             hud.SetObjective("");
-            if (spawners.TryGetValue(Goblin, out var goblins)) goblins.respawnOverride = 99999;
             Night.Dawn(10);
             GameAudio.Music(null, 8);
             StartCoroutine(DeadReturnToEarth());
             yield return Say(
-                "El aullido se apaga. La luna se esconde entre los árboles y los muertos vuelven a la tierra.",
-                "Desde la cabaña, una voz débil pronuncia tu nombre.",
-                "Mateo está vivo. Shadowwood, por ahora, duerme.");
+                "Las tres piezas de la libreta de Mateo apuntan a la cabaña.",
+                "Entra y busca la última pista en su interior.");
+            var door = SceneDoor.Current;
+            if (door != null)
+            {
+                door.locked = false;
+                hud.SetObjective("Entra en la cabaña");
+                hud.SetMarker(door.transform, 2.4f);
+                // The door loads the next scene.
+                while (door != null && !door.Entered) yield return null;
+                yield break;
+            }
             yield return hud.ChapterCard("Shadowwood", "Fin");
             yield return new WaitForSeconds(2);
             if (Application.CanStreamedLevelBeLoaded("MainMenu")) SceneManager.LoadScene("MainMenu");
@@ -176,24 +166,45 @@ namespace ForestVR
 
         // ---------- Objectives ----------
 
-        IEnumerator KillObjective(string enemy, int count, string text, float markerHeight, System.Func<int, string> onKill)
+        IEnumerator EncounterAndPage(string enemy, int pageNumber, string text)
         {
-            int start = Kills(enemy), shown = -1;
-            while (Kills(enemy) - start < count)
+            if (!spawners.TryGetValue(enemy, out var spawner)) yield break;
+            // The spawner fills the configured zone once; no replacement can inflate the kill target.
+            while (!spawner.InitialWaveReady) yield return new WaitForSeconds(.25f);
+            int count = spawner.EncounterCount, shown = -1;
+            Transform center = spawner.spawnPoints != null && spawner.spawnPoints.Length > 0
+                ? spawner.spawnPoints[0] : spawner.spawnPointsRoot;
+            while (Kills(enemy) < count)
             {
-                int done = Kills(enemy) - start;
+                int done = Kills(enemy);
                 if (done != shown)
                 {
-                    if (shown >= 0) { var line = onKill?.Invoke(done); if (line != null) StartCoroutine(Aside(line)); }
                     shown = done;
                     hud.SetObjective(count > 1 ? $"{text} ({done}/{count})" : text, done == 0);
                 }
-                var nearest = Nearest(enemy);
-                hud.SetMarker(nearest != null ? nearest.transform : null, markerHeight);
+                hud.SetMarker(center, 2f);
                 yield return new WaitForSeconds(.25f);
             }
-            hud.SetObjective(count > 1 ? $"{text} ({count}/{count})" : text, false);
-            yield return new WaitForSeconds(1.5f);
+            while (PagePickup.Collected < pageNumber)
+            {
+                hud.SetObjective($"Recoge la pieza de la libreta de tu hermano ({PagePickup.Collected}/3)");
+                var page = NearestPage();
+                hud.SetMarker(page != null ? page.transform : center, .9f);
+                yield return new WaitForSeconds(.25f);
+            }
+            hud.SetMarker(null);
+            yield return Say($"Encontraste una pieza de las notas de tu hermano ({pageNumber}/3).");
+        }
+
+        PagePickup NearestPage()
+        {
+            PagePickup best = null; float closest = float.MaxValue;
+            foreach (var page in FindObjectsByType<PagePickup>())
+            {
+                float d = (page.transform.position - head.position).sqrMagnitude;
+                if (d < closest) { closest = d; best = page; }
+            }
+            return best;
         }
 
         IEnumerator Say(params string[] lines)
@@ -224,10 +235,10 @@ namespace ForestVR
         {
             var audio = GameAudio.Get;
             if (audio == null || audio.whispers == null) yield break;
-            while (Chapter < 5)
+            while (Chapter < 4)
             {
                 yield return new WaitForSeconds(Random.Range(audio.whisperInterval.x, audio.whisperInterval.y));
-                if (Chapter < 5) Whisper(Random.Range(4f, 8f));
+                if (Chapter < 4) Whisper(Random.Range(4f, 8f));
             }
         }
 
@@ -252,11 +263,7 @@ namespace ForestVR
                 foreach (var actor in FindObjectsByType<GoblinActor>())
                 {
                     if (actor.settings == null || actor.Health == null) continue;
-                    if (watched.Add(actor))
-                    {
-                        string name = actor.settings.displayName;
-                        actor.Health.Died += () => kills[name] = Kills(name) + 1;
-                    }
+                    Watch(actor);
                     if (!actor.Health.IsDead) living.Add(actor);
                 }
                 yield return wait;
@@ -264,6 +271,19 @@ namespace ForestVR
         }
 
         int Kills(string enemy) => kills.TryGetValue(enemy, out int n) ? n : 0;
+
+        void Watch(GoblinActor actor)
+        {
+            if (actor == null || actor.Health == null || actor.settings == null || !watched.Add(actor)) return;
+            string enemy = actor.settings.displayName;
+            actor.Health.Died += () =>
+            {
+                kills[enemy] = Kills(enemy) + 1;
+                if (spawners.TryGetValue(enemy, out var spawner) && spawner.InitialWaveReady
+                    && Kills(enemy) >= spawner.EncounterCount && dropped.Add(enemy))
+                    PagePickup.TryDrop(actor.transform.position + actor.transform.forward * .5f, null);
+            };
+        }
 
         GoblinActor Nearest(string enemy)
         {
@@ -275,13 +295,6 @@ namespace ForestVR
                 if (d < closest) { closest = d; best = actor; }
             }
             return best;
-        }
-
-        bool AnyAwake(string enemy)
-        {
-            foreach (var actor in living)
-                if (actor != null && actor.settings.displayName == enemy && actor.CurrentState != GoblinActor.State.Resting) return true;
-            return false;
         }
 
         IEnumerator DeadReturnToEarth()
@@ -305,9 +318,16 @@ namespace ForestVR
 
         // ---------- Places ----------
 
-        static bool HoldingWeapon() =>
-            WeaponGrip.HeldIn(InteractorHandedness.Left) != null || WeaponGrip.HeldIn(InteractorHandedness.Right) != null
-            || WeaponGrip.HeldIn(InteractorHandedness.None) != null;
+        // A weapon of that kind (VRAxe, VRBow, VRRevolver) in either hand.
+        static bool Holding<T>() where T : Component
+        {
+            foreach (var hand in new[] { InteractorHandedness.Left, InteractorHandedness.Right, InteractorHandedness.None })
+            {
+                var grip = WeaponGrip.HeldIn(hand);
+                if (grip != null && grip.GetComponent<T>() != null) return true;
+            }
+            return false;
+        }
 
         // Point on top of a scene object (found by name) for the marker.
         static Transform AnchorOn(string objectName, string label)
@@ -322,7 +342,6 @@ namespace ForestVR
             return anchor;
         }
 
-        static float CabinReach(Transform cabin) => Mathf.Max(cabin.localScale.x, cabin.localScale.z) * .5f + 2.5f;
         static float FlatDistance(Vector3 a, Vector3 b) { a.y = b.y; return Vector3.Distance(a, b); }
 
         // ---------- Night ----------
