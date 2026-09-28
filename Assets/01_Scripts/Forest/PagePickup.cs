@@ -25,6 +25,8 @@ namespace ForestVR
         static void ResetStatics() { Required = 3; Collected = 0; OnGround = 0; PageCollected = null; }
 
         public static void ResetCount() { Collected = 0; }
+        // A loaded game starts with the pages of the chapters it had finished.
+        public static void SetCollected(int count) { Collected = Mathf.Max(0, count); }
 
         // Drops the actual notebook model above safe ground so physics lets it fall naturally.
         public static PagePickup TryDrop(Vector3 position, GameObject prefab)
@@ -92,6 +94,7 @@ namespace ForestVR
             var audio = GameAudio.Get;
             if (audio != null && audio.pagePickup != null) GameAudio.PlayAt(audio.pagePickup, transform.position, 1, 1, 10);
             PageCollected?.Invoke(Collected);
+            Sparkles.Burst(transform.position + Vector3.up * .15f, 60, .2f);
             Destroy(gameObject);
         }
 

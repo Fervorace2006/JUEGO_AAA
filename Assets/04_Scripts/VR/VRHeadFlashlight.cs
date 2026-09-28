@@ -15,6 +15,7 @@ namespace JuegoAAA.VR
         [SerializeField] Color lightColor = new Color(1f, 0.94f, 0.82f);
         [SerializeField] Vector3 headOffset = new Vector3(0f, 0.08f, 0.06f);
         Light flashlight;
+        static readonly Color NightAmbient = new Color(0.07f, 0.085f, 0.14f), NightSky = new Color(0.03f, 0.04f, 0.075f);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void InstallForForest()
@@ -45,13 +46,17 @@ namespace JuegoAAA.VR
             RenderSettings.skybox = null;
             RenderSettings.sun = null;
             RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.004f, 0.006f, 0.012f);
+            // Dim blue moonlight over the whole map, so the night is dark but not pitch black. The probe is what
+            // actually lights the objects, so it gets the same color.
+            RenderSettings.ambientLight = NightAmbient;
             RenderSettings.ambientIntensity = 0f;
-            RenderSettings.ambientProbe = new SphericalHarmonicsL2();
+            var moonlight = new SphericalHarmonicsL2();
+            moonlight.AddAmbientLight(NightAmbient);
+            RenderSettings.ambientProbe = moonlight;
             RenderSettings.reflectionIntensity = 0f;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(0.002f, 0.003f, 0.008f);
+            RenderSettings.fogColor = NightSky;
             RenderSettings.fogDensity = 0.025f;
             foreach (var light in FindObjectsByType<Light>())
                 if (light.gameObject.scene == gameObject.scene && light != flashlight)
@@ -68,7 +73,9 @@ namespace JuegoAAA.VR
                 return;
             }
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.002f, 0.003f, 0.008f);
+            camera.backgroundColor = NightSky;
+            // Moonlight and a moon in the sky, after the other scene lights were switched off.
+            NightMoon.Create(camera.transform);
             var lamp = new GameObject("Head Flashlight");
             lamp.transform.SetParent(camera.transform, false);
             lamp.transform.localPosition = headOffset;

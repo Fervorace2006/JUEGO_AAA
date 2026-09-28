@@ -14,11 +14,19 @@ namespace JuegoAAA.UI
         Color normal, danger;
         bool inside;
         Vector2 labelHome;
+        // Optional backing plate of the button: it warms to a dark blood red while hovered.
+        Graphic plate;
+        Color plateNormal, plateHover;
 
         public void Setup(ShadowwoodMenu owner, Text text, RectTransform line, float fullLine, Color normalColor, Color hoverColor)
         {
             menu = owner; label = text; underline = line; lineWidth = fullLine; normal = normalColor; danger = hoverColor;
             labelHome = label.rectTransform.anchoredPosition;
+        }
+
+        public void SetPlate(Graphic backing, Color hoverColor)
+        {
+            plate = backing; plateNormal = backing.color; plateHover = hoverColor;
         }
 
         public void OnPointerEnter(PointerEventData eventData) { inside = true; menu.OnButtonHover(); }
@@ -35,6 +43,7 @@ namespace JuegoAAA.UI
         {
             if (label == null) return;
             label.color = Color.Lerp(normal, danger, hover);
+            if (plate != null) plate.color = Color.Lerp(plateNormal, plateHover, hover);
             label.rectTransform.localScale = Vector3.one * (1 + .1f * hover);
             // Nervous tremble while hovered.
             label.rectTransform.anchoredPosition = labelHome + (inside ? Random.insideUnitCircle * 2.5f : Vector2.zero);

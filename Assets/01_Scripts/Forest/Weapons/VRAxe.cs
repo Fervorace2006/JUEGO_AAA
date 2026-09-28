@@ -14,10 +14,30 @@ namespace ForestVR
         readonly HashSet<Health> struckWithoutSeparation = new HashSet<Health>();
         readonly HashSet<Health> contacts = new HashSet<Health>();
         float swingTravel, lastMotionAt;
-        void Awake() => grip = GetComponent<WeaponGrip>();
+        // Round damage zone on the head of the axe: a trigger sphere on the blade point (editable in the Inspector),
+        // sized from the weapon settings. Hits are swept with its radius, so a glancing blow still lands.
+        SphereCollider tip;
+        // How far the head must travel in a swing to count as a blow, independent of the zone size.
+        const float MinimumSwingTravel = .07f;
+        float TipRadius => tip != null ? tip.radius * MaxScale(blade) : grip.settings.hitRadius;
+        void Awake()
+        {
+            grip = GetComponent<WeaponGrip>();
+            if (blade == null) return;
+            tip = blade.GetComponent<SphereCollider>();
+            if (tip == null)
+            {
+                tip = blade.gameObject.AddComponent<SphereCollider>();
+                tip.radius = grip.settings.hitRadius / MaxScale(blade);
+            }
+            // Only marks the zone: it neither blocks nor is grabbed; the hits are found by the sweep below.
+            tip.isTrigger = true;
+        }
+        static float MaxScale(Transform t) { var s = t.lossyScale; return Mathf.Max(Mathf.Abs(s.x), Mathf.Abs(s.y), Mathf.Abs(s.z), .0001f); }
         void LateUpdate()
         {
-            if (blade == null || !grip.CanUse)
+            // Paused (pause menu): swinging the axe does not hurt anyone.
+            if (blade == null || !grip.CanUse || PauseMenu.Paused)
             {
                 tracked = false; swingTravel = 0;
                 struckWithoutSeparation.Clear(); contacts.Clear();
@@ -44,7 +64,8 @@ namespace ForestVR
             else if (Time.time - lastMotionAt > 0.2f) swingTravel = 0;
 
             // Sweep the blade point so a fast swing cannot pass through a thin collider.
-            var hits = Physics.OverlapCapsule(previous, now, grip.settings.hitRadius,
+            float radius = TipRadius;
+            var hits = Physics.OverlapCapsule(previous, now, radius,
                 Physics.AllLayers, QueryTriggerInteraction.Ignore);
             Array.Sort(hits, (a,b) =>
                 (a.ClosestPoint(previous) - previous).sqrMagnitude.CompareTo(
@@ -56,7 +77,7 @@ namespace ForestVR
                 if (health != null) contacts.Add(health);
             }
             // Keep a hit latched while the edge is resting on the same body, even after cooldown.
-            foreach (var hit in Physics.OverlapSphere(now, grip.settings.hitRadius,
+            foreach (var hit in Physics.OverlapSphere(now, radius,
                 Physics.AllLayers, QueryTriggerInteraction.Ignore))
             {
                 var health = Target(hit);
@@ -64,7 +85,7 @@ namespace ForestVR
             }
             struckWithoutSeparation.RemoveWhere(health => health == null || !contacts.Contains(health));
 
-            if (swingTravel >= grip.settings.hitRadius && Time.time - lastMotionAt <= 0.2f)
+            if (swingTravel >= MinimumSwingTravel && Time.time - lastMotionAt <= 0.2f)
             {
                 foreach (var hit in hits)
                 {
@@ -77,11 +98,19 @@ namespace ForestVR
                         health.TakeHit(grip.settings.damage, grip.SourcePosition);
                         struckWithoutSeparation.Add(health);
                         swingTravel = 0;
+                        Buzz();
                     }
                     break; // Walls block the blade sweep before an enemy behind them.
                 }
             }
             previous = now; previousOwner = grip.SourcePosition;
+        }
+        // The hand holding the axe feels the blow.
+        void Buzz()
+        {
+            foreach (var interactor in grip.Grab.interactorsSelecting)
+                if (interactor is UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInputInteractor input)
+                    input.SendHapticImpulse(.7f, .12f);
         }
         Health Target(Collider hit)
         {

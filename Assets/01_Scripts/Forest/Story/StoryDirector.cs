@@ -90,94 +90,114 @@ namespace ForestVR
         {
             yield return new WaitForSeconds(2.5f);
             cabinLight = CabinLight.Create(GameObject.Find("Casita Final"), SceneDoor.Current != null ? SceneDoor.Current.transform : null);
+            // A loaded game (CONTINUAR PARTIDA) starts again at the beginning of its saved chapter.
+            int start = SaveGame.TakeStartChapter(gameObject.scene.name);
+            if (start > 0) PagePickup.SetCollected(Mathf.Min(start - 1, PagePickup.Required));
+            // Past the revolver the cabin is already lit.
+            if (start >= 4 && cabinLight != null) cabinLight.TurnOn();
 
             // ---------- Prologue: the camp ----------
-            Chapter = 0;
-            yield return hud.ChapterCard("Shadowwood", "Prólogo · Tres noches");
-            yield return Say(
-                "Hace tres noches que Mateo, tu hermano, entró en Shadowwood. No volvió.",
-                "Este claro era su campamento. Su hacha sigue sobre la mesa.",
-                "Arrancó las páginas de su libreta y las fue dejando por el bosque. Síguelas.");
-            hud.SetObjective("Toma el hacha de la mesa del campamento");
-            hud.SetMarker(AnchorOn("MESA 1", "Mesa del campamento"), .6f);
-            while (!Holding<VRAxe>()) yield return null;
-            hud.SetMarker(null);
+            if (start <= 0)
+            {
+                Chapter = 0;
+                yield return hud.ChapterCard("Shadowwood", "Prólogo · Tres noches");
+                yield return Say(
+                    "Hace tres noches que Mateo, tu hermano, entró en Shadowwood. No volvió.",
+                    "Este claro era su campamento. Su hacha sigue sobre la mesa.",
+                    "Arrancó las páginas de su libreta y las fue dejando por el bosque. Síguelas.");
+                hud.SetObjective("Toma el hacha de la mesa del campamento");
+                hud.SetMarker(AnchorOn("MESA 1", "Mesa del campamento"), .6f);
+                while (!Holding<VRAxe>()) yield return null;
+                hud.SetMarker(null);
+            }
 
             // ---------- I: the goblins of the clearing ----------
-            Chapter = 1;
-            hud.SetObjective("");
-            yield return hud.ChapterCard("Capítulo I", "Los que duermen");
-            yield return Say(
-                "Los duendes duermen aquí mismo, alrededor del claro. Solo despiertan si te acercas demasiado.",
-                "Uno de ellos guarda la primera página. Elimínalos: el último en caer la soltará.");
-            Night.Darken(.25f, 10);
-            yield return EncounterAndPage(Goblin, 1, "Elimina a los duendes del claro y recoge la primera página");
+            if (start <= 1)
+            {
+                Chapter = 1;
+                hud.SetObjective("");
+                yield return hud.ChapterCard("Capítulo I", "Los que duermen");
+                yield return Say(
+                    "Los duendes duermen aquí mismo, alrededor del claro. Solo despiertan si te acercas demasiado.",
+                    "Uno de ellos guarda la primera página. Elimínalos: el último en caer la soltará.");
+                Night.Darken(.25f, 10);
+                yield return EncounterAndPage(Goblin, 1, "Elimina a los duendes del claro y recoge la primera página");
+            }
 
             // ---------- II: north to MESA 2, then the dead to the west ----------
-            Chapter = 2;
-            hud.SetMarker(null);
-            hud.SetObjective("");
-            yield return Say(
-                "La primera página, con la letra de Mateo: «Dejé el arco en la mesa del norte, pasada la roca del musgo».",
-                "«Al oeste de esa mesa la tierra está removida. No te acerques de noche.»");
-            yield return hud.ChapterCard("Capítulo II", "Los que no descansan");
-            hud.SetObjective("Ve al norte y toma el arco de la segunda mesa");
-            hud.SetMarker(AnchorOn("MESA 2", "Segunda mesa"), .6f);
-            while (!Holding<VRBow>()) yield return null;
-            hud.SetMarker(null);
-            Whisper(3);
-            yield return Say("Al oeste, la tierra se abre. Los muertos se levantan.");
-            SetSpawner(Zombie, true);
-            Night.Darken(.5f, 12);
-            yield return EncounterAndPage(Zombie, 2, "Elimina a los zombis del oeste y recoge la segunda página");
-            SetSpawner(Zombie, false);
+            if (start <= 2)
+            {
+                Chapter = 2;
+                hud.SetMarker(null);
+                hud.SetObjective("");
+                yield return Say(
+                    "La primera página, con la letra de Mateo: «Dejé el arco en la mesa del norte, pasada la roca del musgo».",
+                    "«Al oeste de esa mesa la tierra está removida. No te acerques de noche.»");
+                yield return hud.ChapterCard("Capítulo II", "Los que no descansan");
+                hud.SetObjective("Ve al norte y toma el arco de la segunda mesa");
+                hud.SetMarker(AnchorOn("MESA 2", "Segunda mesa"), .6f);
+                while (!Holding<VRBow>()) yield return null;
+                hud.SetMarker(null);
+                Whisper(3);
+                yield return Say("Al oeste, la tierra se abre. Los muertos se levantan.");
+                SetSpawner(Zombie, true);
+                Night.Darken(.5f, 12);
+                yield return EncounterAndPage(Zombie, 2, "Elimina a los zombis del oeste y recoge la segunda página");
+                SetSpawner(Zombie, false);
+            }
 
             // ---------- III: south to MESA 3, the cabin lights up, the werewolf ----------
-            Chapter = 3;
-            hud.SetMarker(null);
-            hud.SetObjective("");
-            yield return Say(
-                "La segunda página: «El revólver está en la mesa del suroeste. Cárgalo antes de que salga la luna».",
-                "«Si ves luz en la cabaña, no es mía.»");
-            hud.SetObjective("Ve al suroeste y toma el revólver de la tercera mesa");
-            hud.SetMarker(AnchorOn("MESA 3", "Tercera mesa"), .6f);
-            while (!Holding<VRRevolver>()) yield return null;
-            hud.SetMarker(null);
-            // The light comes on in the cabin to the south, where the story ends.
-            if (cabinLight != null) cabinLight.TurnOn();
-            yield return Say(
-                "Al sur, entre los árboles, se enciende una luz en la cabaña. Alguien está ahí dentro.",
-                "Un aullido responde desde el camino.");
-            Night.BloodMoon(8);
-            if (GameAudio.Get != null) GameAudio.Music(GameAudio.Get.bossMusic, 4);
-            yield return hud.ChapterCard("Capítulo III", "Luna de sangre");
-            SetSpawner(Werewolf, true);
-            yield return EncounterAndPage(Werewolf, 3, "Acaba con el Hombre Lobo que guarda el camino a la cabaña");
-            SetSpawner(Werewolf, false);
+            if (start <= 3)
+            {
+                Chapter = 3;
+                hud.SetMarker(null);
+                hud.SetObjective("");
+                yield return Say(
+                    "La segunda página: «El revólver está en la mesa del suroeste. Cárgalo antes de que salga la luna».",
+                    "«Si ves luz en la cabaña, no es mía.»");
+                hud.SetObjective("Ve al suroeste y toma el revólver de la tercera mesa");
+                hud.SetMarker(AnchorOn("MESA 3", "Tercera mesa"), .6f);
+                while (!Holding<VRRevolver>()) yield return null;
+                hud.SetMarker(null);
+                // The light comes on in the cabin to the south, where the story ends.
+                if (cabinLight != null) cabinLight.TurnOn();
+                yield return Say(
+                    "Al sur, entre los árboles, se enciende una luz en la cabaña. Alguien está ahí dentro.",
+                    "Un aullido responde desde el camino.");
+                Night.BloodMoon(8);
+                if (GameAudio.Get != null) GameAudio.Music(GameAudio.Get.bossMusic, 4);
+                yield return hud.ChapterCard("Capítulo III", "Luna de sangre");
+                SetSpawner(Werewolf, true);
+                yield return EncounterAndPage(Werewolf, 3, "Acaba con el Hombre Lobo que guarda el camino a la cabaña");
+                SetSpawner(Werewolf, false);
+            }
 
             // ---------- Dawn: into the cabin ----------
-            Chapter = 4;
-            hud.SetMarker(null);
-            hud.SetObjective("");
-            Night.Dawn(10);
-            GameAudio.Music(null, 8);
-            StartCoroutine(DeadReturnToEarth());
-            yield return Say(
-                "La última página: «Me escondo en la cabaña. Encenderé la luz cuando sea seguro».",
-                "La luz sigue encendida. Mateo te espera.");
-            var door = SceneDoor.Current;
-            if (door != null)
+            if (start <= 4)
             {
-                door.locked = false;
-                hud.SetObjective("Entra en la cabaña");
-                hud.SetMarker(door.transform, 2.4f);
-                // The door loads the next scene.
-                while (door != null && !door.Entered) yield return null;
-                yield break;
+                Chapter = 4;
+                hud.SetMarker(null);
+                hud.SetObjective("");
+                Night.Dawn(10);
+                GameAudio.Music(null, 8);
+                StartCoroutine(DeadReturnToEarth());
+                yield return Say(
+                    "La última página: «Me escondo en la cabaña. Encenderé la luz cuando sea seguro».",
+                    "La luz sigue encendida. Mateo te espera.");
+                var door = SceneDoor.Current;
+                if (door != null)
+                {
+                    door.locked = false;
+                    hud.SetObjective("Entra en la cabaña");
+                    hud.SetMarker(door.transform, 2.4f);
+                    // The door loads the next scene.
+                    while (door != null && !door.Entered) yield return null;
+                    yield break;
+                }
+                yield return hud.ChapterCard("Shadowwood", "Fin");
+                yield return new WaitForSeconds(2);
+                if (Application.CanStreamedLevelBeLoaded("MainMenu")) SceneManager.LoadScene("MainMenu");
             }
-            yield return hud.ChapterCard("Shadowwood", "Fin");
-            yield return new WaitForSeconds(2);
-            if (Application.CanStreamedLevelBeLoaded("MainMenu")) SceneManager.LoadScene("MainMenu");
         }
 
         // ---------- Objectives ----------
@@ -198,7 +218,9 @@ namespace ForestVR
                     shown = done;
                     hud.SetObjective(count > 1 ? $"{text} ({done}/{count})" : text, done == 0);
                 }
-                hud.SetMarker(center, 2f);
+                // Toward the nearest one still standing; the page is only there once they are all down.
+                var nearest = Nearest(enemy);
+                hud.SetMarker(nearest != null ? nearest.transform : center, 2f);
                 yield return new WaitForSeconds(.25f);
             }
             while (PagePickup.Collected < pageNumber)
@@ -289,6 +311,8 @@ namespace ForestVR
         {
             if (actor == null || actor.Health == null || actor.settings == null || !watched.Add(actor)) return;
             string enemy = actor.settings.displayName;
+            // Every enemy that appears shows where it is.
+            EnemyBeacon.Attach(actor, head);
             actor.Health.Died += () =>
             {
                 kills[enemy] = Kills(enemy) + 1;

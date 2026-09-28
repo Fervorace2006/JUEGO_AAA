@@ -57,5 +57,7 @@ MonoBehaviour:
   voiceVolume: 1
   voicePitch: {x: 1, y: 1.15}
   hearingDistance: 25
+  lockHipsInPlace: 1
+  snapFeetToGround: 1
   dropsPages: 0
   pagePrefab: {fileID: 0}

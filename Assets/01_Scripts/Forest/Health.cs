@@ -33,6 +33,13 @@ namespace ForestVR
             onHealthChanged.Invoke(Current);
         }
         public void Restore() { Current = maximum; onHealthChanged.Invoke(Current); }
+        // A loaded game: back to the saved health, without the damage effects of a blow.
+        public void SetCurrent(float value)
+        {
+            if (float.IsNaN(value)) return;
+            Current = Mathf.Clamp(value, 1, maximum);
+            onHealthChanged.Invoke(Current);
+        }
         [ContextMenu("Debug/Recibir 25 de dano")]
         void DebugDamage() { if (Application.isPlaying) TakeDamage(25); }
     }

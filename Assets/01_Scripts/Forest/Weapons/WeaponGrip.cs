@@ -93,13 +93,31 @@ namespace ForestVR
             foreach (var renderer in model.GetComponentsInChildren<Renderer>(true))
             {
                 foreach (var material in renderer.materials)
+                {
+                    MakeUnlit(material);
                     if (material.HasProperty(CullId)) material.SetFloat(CullId, (float)UnityEngine.Rendering.CullMode.Off);
+                }
                 LimitDetail(renderer);
             }
             // The interactable registered its colliders when it was enabled; register it again with the new ones.
             if (added && Grab.enabled) { Grab.enabled = false; Grab.enabled = true; }
         }
         static readonly int CullId = Shader.PropertyToID("_Cull");
+        static Shader unlit;
+        // The weapons keep their own colors whatever the light: the night, the flashlight or the blood moon do not
+        // darken or tint them. Same texture and color, on the URP Unlit shader (also used by the bow string).
+        static void MakeUnlit(Material material)
+        {
+            if (unlit == null) unlit = Shader.Find("Universal Render Pipeline/Unlit");
+            if (unlit == null || material.shader == unlit) return;
+            var texture = material.HasProperty("_BaseMap") ? material.GetTexture("_BaseMap")
+                : material.HasProperty("_MainTex") ? material.mainTexture : null;
+            var color = material.HasProperty("_BaseColor") ? material.GetColor("_BaseColor")
+                : material.HasProperty("_Color") ? material.color : Color.white;
+            material.shader = unlit;
+            material.SetTexture("_BaseMap", texture);
+            material.SetColor("_BaseColor", color);
+        }
         const int MaxTriangles = 40000;
         // The generated axe has almost a million triangles, more than the rest of the forest together: on the Quest the
         // frame rate fell to 20-30 FPS and the view flickered while moving. Its model imports Mesh LODs (simplified

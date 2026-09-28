@@ -36,6 +36,8 @@ namespace ForestVR
         // Closer than this it notices the player even behind its back (it hears and smells them).
         const float CloseAwareness = 2.5f;
         float aggroUntil, turnStarted, lastHealth, animSpeed = 1;
+        const float ReachMargin = .35f;
+        bool inReach, turningInPlace;
         Vector3 knockback;
         Transform hips;
         Vector3 hipsRest;
@@ -66,6 +68,7 @@ namespace ForestVR
                 graph.Play();
                 foreach (var bone in animator.GetComponentsInChildren<Transform>(true))
                     if (bone.name == "Hips" || bone.name == "Hip") { hips = bone; hipsRest = transform.InverseTransformPoint(bone.position); break; }
+                if (settings.snapFeetToGround) SetupGrounding();
             }
             EnemyNameplate.Create(this, target);
             Rest();
@@ -210,15 +213,20 @@ namespace ForestVR
             bool aware = CanSeeTarget() || (distance <= CloseAwareness && HasLineOfSight()) || Time.time < aggroUntil;
             if (aware)
             { lastKnown = target.position; lastSeenAt = Time.time; remembersTarget = true; }
-            if (aware && distance <= settings.attackRange)
+            // A margin on the way out and on the turn, so a player standing right at the edge of its reach does not make
+            // it switch between walking and standing every frame (each switch restarted the crossfade: jerky body).
+            inReach = aware && distance <= settings.attackRange + (inReach ? ReachMargin : 0);
+            if (inReach)
             {
                 Face(target.position, settings.turnSpeed * 1.5f);
                 // Only swing once it faces the player; while turning in place its feet step instead of sliding.
+                turningInPlace = !InFront(delta, turningInPlace ? 15 : 30);
                 if (InFront(delta, 70) && Time.time >= nextAttack) Attack();
-                else if (!InFront(delta, 30) && settings.walk != null) { CurrentState = State.Idle; PlayAt(settings.walk, .6f); }
+                else if (turningInPlace && settings.walk != null) { CurrentState = State.Idle; PlayAt(settings.walk, .6f); }
                 else Idle();
                 return;
             }
+            turningInPlace = false;
             if (remembersTarget && Time.time - lastSeenAt <= settings.memorySeconds && Flat(lastKnown - transform.position).magnitude > 0.5f)
             {
                 // Head for the player, but around trees, rocks and walls instead of pushing into them.
@@ -369,7 +377,10 @@ namespace ForestVR
             body.enabled = false;
             if (settings.dropsPages) PagePickup.TryDrop(transform.position + transform.forward * .5f, settings.pagePrefab);
             Play(settings.death, true);
-            Destroy(gameObject, Mathf.Max(settings.corpseSeconds, settings.death != null ? settings.death.length : 0));
+            // Sparkles now; once the fall ends the body turns to ash that drifts up, and the enemy is removed.
+            float fall = settings.death != null ? settings.death.length : 1;
+            EnemyAshes.Begin(gameObject, fall);
+            Destroy(gameObject, Mathf.Max(settings.corpseSeconds, fall + 12));
         }
         void PlaceOnGround()
         {
@@ -407,6 +418,97 @@ namespace ForestVR
                 local.x = hipsRest.x; local.z = hipsRest.z;
                 hips.position = transform.TransformPoint(local);
             }
+            if (skeleton != null) GroundFeet();
+        }
+
+        // ---------- Feet on the ground ----------
+        // The goblin's clips raise or lower the whole skeleton (its idle sits ~15 cm lower than its walk and attacks),
+        // so a fixed model offset left it floating or sunk. After each animated frame the skeleton is shifted so the
+        // soles touch the ground under it; once dead, so the lowest part of the fallen body rests on it.
+        Transform skeleton;
+        Transform[] feet, bones;
+        Vector3 skeletonRest;
+        float soleBelowFeet, groundShift;
+        bool groundShiftReady;
+        readonly RaycastHit[] groundHits = new RaycastHit[8];
+        const float BodyThickness = .07f, MaxShift = .6f;
+        static readonly Dictionary<Mesh, float> soleDepths = new Dictionary<Mesh, float>();
+
+        void SetupGrounding()
+        {
+            var list = new List<Transform>();
+            var body = new List<Transform>();
+            foreach (var bone in animator.GetComponentsInChildren<Transform>(true))
+            {
+                var n = bone.name.ToLowerInvariant();
+                if (n.Contains("foot") || n.Contains("toe")) list.Add(bone);
+                // The fallen body: every bone except the skeleton's container and its root, which stay at floor level.
+                if (bone != animator.transform && !n.Contains("root") && !n.Contains("armature") && bone.GetComponent<Renderer>() == null) body.Add(bone);
+            }
+            if (list.Count == 0) return;
+            feet = list.ToArray();
+            bones = body.ToArray();
+            skeleton = animator.transform;
+            skeletonRest = skeleton.localPosition;
+            // How far the mesh sole reaches below the lowest foot bone, measured once per model in the idle pose.
+            var skin = GetComponentInChildren<SkinnedMeshRenderer>();
+            soleBelowFeet = .03f;
+            if (skin != null && skin.sharedMesh != null)
+            {
+                if (!soleDepths.TryGetValue(skin.sharedMesh, out float depth))
+                {
+                    if (settings.idle != null) settings.idle.SampleAnimation(animator.gameObject, 0);
+                    var baked = new Mesh();
+                    skin.BakeMesh(baked, true);
+                    var vertices = baked.vertices;
+                    var pose = Matrix4x4.TRS(skin.transform.position, skin.transform.rotation, Vector3.one);
+                    float lowest = float.PositiveInfinity;
+                    foreach (var v in vertices) lowest = Mathf.Min(lowest, pose.MultiplyPoint3x4(v).y);
+                    Destroy(baked);
+                    depth = Mathf.Clamp(LowestY(feet) - lowest, 0, .2f);
+                    soleDepths[skin.sharedMesh] = depth;
+                }
+                soleBelowFeet = depth;
+            }
+        }
+
+        void GroundFeet()
+        {
+            // Back to the prefab offset first, so the shift is measured from the animated pose of this frame.
+            skeleton.localPosition = skeletonRest;
+            if (!TryGround(out float ground)) return;
+            bool dead = health != null && health.IsDead;
+            float lowest = dead ? LowestY(bones) - BodyThickness : LowestY(feet) - soleBelowFeet;
+            float shift = Mathf.Clamp(ground - lowest, -MaxShift, MaxShift);
+            // Smooth, so a step onto a root or a rock does not snap the body.
+            groundShift = groundShiftReady ? Mathf.Lerp(groundShift, shift, 1 - Mathf.Exp(-15 * Time.deltaTime)) : shift;
+            groundShiftReady = true;
+            skeleton.position += Vector3.up * groundShift;
+        }
+
+        static float LowestY(Transform[] list)
+        {
+            float lowest = float.PositiveInfinity;
+            foreach (var t in list) if (t != null) lowest = Mathf.Min(lowest, t.position.y);
+            return lowest;
+        }
+
+        // First solid surface below the goblin: ground, rock, bridge; never itself, another enemy, the player or a weapon.
+        bool TryGround(out float height)
+        {
+            height = 0;
+            var from = transform.position + Vector3.up * .8f;
+            int count = Physics.RaycastNonAlloc(from, Vector3.down, groundHits, 2.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            float best = float.PositiveInfinity;
+            for (int i = 0; i < count; i++)
+            {
+                var hit = groundHits[i];
+                if (hit.transform.IsChildOf(transform) || hit.collider.GetComponentInParent<GoblinActor>() != null
+                    || hit.collider.GetComponentInParent<WeaponGrip>() != null
+                    || (targetHealth != null && hit.transform.IsChildOf(targetHealth.transform))) continue;
+                if (hit.distance < best) { best = hit.distance; height = hit.point.y; }
+            }
+            return !float.IsPositiveInfinity(best);
         }
         bool IsLoopingClip(AnimationClip clip) =>
             clip == settings.idle || clip == settings.walk || clip == settings.run || clip == settings.woundedWalk

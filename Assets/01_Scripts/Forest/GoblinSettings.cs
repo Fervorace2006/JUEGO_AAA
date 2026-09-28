@@ -47,6 +47,9 @@ namespace ForestVR
         [Min(0)] public float woundedRunSpeed = 1.5f;
         [Tooltip("For clips that move the hips forward instead of animating in place: keeps the body over the character.")]
         public bool lockHipsInPlace;
+        [Tooltip("Moves the skeleton up or down every frame so the feet (or the body, once dead) touch the ground below: " +
+                 "for rigs whose clips raise or lower the whole body, which made it float or sink.")]
+        public bool snapFeetToGround;
         [Header("Nombre y barra de vida sobre la cabeza")]
         public string displayName = "Duende";
         public Color healthBarColor = new Color(.16f, .85f, .25f);

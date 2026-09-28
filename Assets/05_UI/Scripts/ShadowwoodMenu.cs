@@ -51,6 +51,7 @@ namespace JuegoAAA.UI
             BuildCanvas();
             BuildAudio();
             StartCoroutine(Fade(1, 0, 2.5f));
+            StartCoroutine(IntroButtons());
             StartCoroutine(Scares());
         }
 
@@ -102,33 +103,40 @@ namespace JuegoAAA.UI
             redPulse = Raw("Red Pulse", root, RadialTexture(false), 0, 0, W, H);
             redPulse.color = new Color(.5f, 0, 0, 0);
 
-            // Dark band at the bottom that holds the buttons.
-            var band = Raw("Bottom Band", root, GradientTexture(), 0, H - 300, W, 300);
-            band.color = new Color(0, 0, 0, .9f);
+            // Shade on the left side behind the menu column, and a softer one at the bottom behind the footer.
+            var side = Raw("Side Shade", root, SideGradientTexture(), 0, 0, 860, H);
+            side.color = new Color(0, 0, 0, .8f);
+            var bottom = Raw("Bottom Shade", root, GradientTexture(), 0, H - 170, W, 170);
+            bottom.color = new Color(0, 0, 0, .75f);
 
             mainGroup = Group("Main", root);
-            var tagline = Label("Tagline", (RectTransform)mainGroup.transform, "No salgas del sendero", textFont, 30, 108, 168, 760, 50, TextAnchor.MiddleLeft);
-            tagline.color = new Color(.62f, .07f, .05f);
-            AddButton("JUGAR", (RectTransform)mainGroup.transform, 468, 930, Play);
-            AddButton("CONTROLES", (RectTransform)mainGroup.transform, 768, 930, () => ShowControls(true));
-            AddButton("SALIR", (RectTransform)mainGroup.transform, 1068, 930, Quit);
+            var main = (RectTransform)mainGroup.transform;
+            var tagline = Label("Tagline", main, "No salgas del sendero", textFont, 30, 112, 162, 760, 50, TextAnchor.MiddleLeft);
+            tagline.color = new Color(.7f, .08f, .05f);
+            // Thin blood line under the tagline that fades to the right.
+            var divider = Raw("Divider", main, SideGradientTexture(), 112, 216, 480, 3);
+            divider.color = new Color(.72f, .04f, .03f, .9f);
 
-            controlsGroup = Group("Controls", root);
-            var panel = Raw("Panel", (RectTransform)controlsGroup.transform, null, 268, 170, 1000, 640);
-            panel.color = new Color(0, 0, 0, .86f);
-            var title = Label("Controls Title", (RectTransform)controlsGroup.transform, "CONTROLES", titleFont, 58, 268, 195, 1000, 80, TextAnchor.MiddleCenter);
-            title.color = Blood;
-            Label("Controls Text", (RectTransform)controlsGroup.transform,
-                "Grip: agarrar y soltar un arma\n" +
-                "Gatillo: disparar el revólver\n" +
-                "Arco: en la mano izquierda; tira de la cuerda con la derecha\n" +
-                "Hacha: golpea con fuerza\n" +
-                "Joystick: moverse y girar\n" +
-                "Clic en el joystick izquierdo: correr (gasta aliento)\n" +
-                "Si mueres, vuelves al menú y empiezas de nuevo\n\n" +
-                "Los duendes duermen. No te acerques demasiado.",
-                textFont, 32, 318, 290, 900, 400, TextAnchor.UpperLeft).lineSpacing = 1.15f;
-            AddButton("VOLVER", (RectTransform)controlsGroup.transform, 768, 740, () => ShowControls(false));
+            // Menu column: the saved game first when there is one, then a new game, the controls and quit.
+            menuItems.Clear();
+            float y = 262;
+            var save = ForestVR.SaveGame.Exists ? ForestVR.SaveGame.Read() : null;
+            if (save != null)
+            {
+                AddMenuButton("CONTINUAR PARTIDA", main, 104, y, 500, ContinueGame, $"{ChapterName(save.chapter)}  ·  {save.savedAt}");
+                y += 118;
+            }
+            AddMenuButton(save != null ? "NUEVA PARTIDA" : "JUGAR", main, 104, y, 500, Play); y += 100;
+            AddMenuButton("CONTROLES", main, 104, y, 500, () => ShowControls(true)); y += 100;
+            AddMenuButton("SALIR", main, 104, y, 500, Quit);
+
+            // Footer: how to choose, and the pause button in the game.
+            var hint = Label("Hint", main, "Apunta con el mando y pulsa el gatillo para elegir", textFont, 24, 112, H - 72, 900, 40, TextAnchor.MiddleLeft);
+            hint.color = new Color(.72f, .68f, .6f);
+            var pause = Label("Pause Hint", main, "En el bosque, botón X: pausa, guardar y salir", textFont, 24, W - 812, H - 72, 700, 40, TextAnchor.MiddleRight);
+            pause.color = new Color(.72f, .68f, .6f);
+
+            BuildControls();
             ShowControls(false);
 
             fade = new GameObject("Fade", typeof(RectTransform)).AddComponent<Image>();
@@ -136,24 +144,122 @@ namespace JuegoAAA.UI
             fade.color = Color.black; fade.raycastTarget = false;
         }
 
-        void AddButton(string text, RectTransform parent, float centerX, float centerY, UnityEngine.Events.UnityAction onClick)
+        // Framed menu button: a dark plate with a blood-red bar on its left, the label in the title's capitals and an
+        // optional second line. Hover warms the plate, turns the label red, makes it tremble and draws a line under it.
+        void AddMenuButton(string text, RectTransform parent, float x, float y, float w, UnityEngine.Events.UnityAction onClick,
+            string detail = null, bool centered = false)
         {
-            const float w = 300, h = 96;
+            float h = detail != null ? 100 : 82;
             var go = new GameObject(text + " Button", typeof(RectTransform));
             var rect = (RectTransform)go.transform;
-            Place(rect, parent, centerX - w / 2, centerY - h / 2, w, h);
-            // Invisible hit area; the text is what you see.
-            var hit = go.AddComponent<Image>();
-            hit.color = new Color(0, 0, 0, 0.001f);
+            Place(rect, parent, x, y, w, h);
+            // The plate is also the hit area of the controller ray.
+            var plate = go.AddComponent<Image>();
+            plate.color = new Color(.04f, .03f, .03f, .62f);
             var button = go.AddComponent<Button>();
             button.transition = Selectable.Transition.None;
             button.onClick.AddListener(onClick);
-            var label = Label("Text", rect, text, titleFont, 46, 0, 0, w, h, TextAnchor.MiddleCenter);
+            var bar = new GameObject("Accent", typeof(RectTransform)).AddComponent<Image>();
+            Place(bar.rectTransform, rect, 0, 0, 6, h);
+            bar.color = Blood; bar.raycastTarget = false;
+            float textX = centered ? 0 : 30;
+            var label = Label("Text", rect, text, titleFont, 40, textX, detail != null ? 8 : 0, w - textX, detail != null ? 56 : h,
+                centered ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft);
             label.color = Bone;
+            if (detail != null)
+            {
+                var sub = Label("Detail", rect, detail, textFont, 22, textX + 2, 60, w - textX - 10, 32, TextAnchor.MiddleLeft);
+                sub.color = new Color(.7f, .64f, .55f);
+            }
             var line = new GameObject("Underline", typeof(RectTransform)).AddComponent<Image>();
-            Place(line.rectTransform, rect, w / 2, h - 12, 0, 3);
+            Place(line.rectTransform, rect, w / 2, h - 6, 0, 2);
             line.color = Blood; line.raycastTarget = false;
-            go.AddComponent<MenuButtonFx>().Setup(this, label, line.rectTransform, w * .8f, Bone, Blood);
+            var fx = go.AddComponent<MenuButtonFx>();
+            fx.Setup(this, label, line.rectTransform, w * .9f, Bone, new Color(.95f, .12f, .08f));
+            fx.SetPlate(plate, new Color(.32f, .03f, .02f, .78f));
+            // Each button fades and slides in after the black fade of the start.
+            var group = go.AddComponent<CanvasGroup>();
+            group.alpha = 0;
+            menuItems.Add((rect, group, rect.anchoredPosition));
+        }
+
+        readonly System.Collections.Generic.List<(RectTransform rect, CanvasGroup group, Vector2 home)> menuItems =
+            new System.Collections.Generic.List<(RectTransform, CanvasGroup, Vector2)>();
+
+        // The buttons come in one after another from the left while the view clears.
+        IEnumerator IntroButtons()
+        {
+            yield return new WaitForSeconds(1.2f);
+            for (int i = 0; i < menuItems.Count; i++) StartCoroutine(SlideIn(menuItems[i], i * .12f));
+        }
+
+        IEnumerator SlideIn((RectTransform rect, CanvasGroup group, Vector2 home) item, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            const float seconds = .45f;
+            for (float t = 0; t < seconds && item.rect != null; t += Time.deltaTime)
+            {
+                float k = Mathf.SmoothStep(0, 1, t / seconds);
+                item.group.alpha = k;
+                item.rect.anchoredPosition = item.home + Vector2.left * (70 * (1 - k));
+                yield return null;
+            }
+            if (item.rect == null) yield break;
+            item.group.alpha = 1;
+            item.rect.anchoredPosition = item.home;
+        }
+
+        static string ChapterName(int chapter)
+        {
+            switch (chapter)
+            {
+                case 0: return "Prólogo";
+                case 1: return "Capítulo I · Los que duermen";
+                case 2: return "Capítulo II · Los que no descansan";
+                case 3: return "Capítulo III · Luna de sangre";
+                default: return "Amanecer";
+            }
+        }
+
+        // Controls: a framed table, the control on the left and what it does on the right.
+        void BuildControls()
+        {
+            controlsGroup = Group("Controls", root);
+            var group = (RectTransform)controlsGroup.transform;
+            const float x = 218, y = 120, w = 1100, h = 760;
+            var panel = Raw("Panel", group, null, x, y, w, h);
+            panel.color = new Color(.02f, .015f, .015f, .92f);
+            var frame = Raw("Frame Top", group, null, x, y, w, 4); frame.color = Blood;
+            var frameBottom = Raw("Frame Bottom", group, null, x, y + h - 4, w, 4); frameBottom.color = Blood;
+            var title = Label("Controls Title", group, "CONTROLES", titleFont, 58, x, y + 24, w, 80, TextAnchor.MiddleCenter);
+            title.color = Blood;
+            var divider = Raw("Divider", group, SideGradientTexture(), x + 300, y + 112, w - 600, 2);
+            divider.color = new Color(.72f, .04f, .03f, .8f);
+            var rows = new[]
+            {
+                ("Grip", "Agarrar y soltar un arma"),
+                ("Gatillo", "Disparar el revólver (6 balas)"),
+                ("Mano abajo, rápido", "Recargar el revólver"),
+                ("Arco", "En la mano izquierda; tira de la cuerda con la derecha"),
+                ("Hacha", "Golpea con fuerza: la cabeza del hacha hace el daño"),
+                ("Joysticks", "Moverse y girar"),
+                ("Clic joystick izq.", "Correr (gasta aliento)"),
+                ("Botón X", "Pausa: continuar, guardar la partida o salir"),
+                ("Al morir", "REINTENTAR: vuelves donde caíste"),
+            };
+            float rowY = y + 140;
+            foreach (var (control, action) in rows)
+            {
+                var key = Label("Control", group, control, titleFont, 28, x + 60, rowY, 360, 46, TextAnchor.MiddleRight);
+                key.color = Bone;
+                var what = Label("Action", group, action, textFont, 28, x + 460, rowY, w - 520, 46, TextAnchor.MiddleLeft);
+                what.color = new Color(.78f, .73f, .64f);
+                rowY += 50;
+            }
+            var warning = Label("Warning", group, "Los duendes duermen. No te acerques demasiado.", textFont, 28, x, y + h - 170, w, 44, TextAnchor.MiddleCenter);
+            warning.color = new Color(.7f, .08f, .05f);
+            warning.fontStyle = FontStyle.Italic;
+            AddMenuButton("VOLVER", group, x + w / 2 - 170, y + h - 112, 340, () => ShowControls(false), centered: true);
         }
 
         CanvasGroup Group(string name, RectTransform parent)
@@ -207,21 +313,37 @@ namespace JuegoAAA.UI
 
         // ---------- Actions ----------
 
+        // JUGAR: a new game from the start.
         void Play()
         {
             if (loading) return;
-            if (!Application.CanStreamedLevelBeLoaded(gameScene))
-            { Debug.LogError($"La escena '{gameScene}' no esta en Build Settings.", this); return; }
+            ForestVR.SaveGame.ClearPending();
+            StartGame(gameScene);
+        }
+
+        // CONTINUAR PARTIDA: the last saved game, from the beginning of its chapter where the player saved.
+        void ContinueGame()
+        {
+            if (loading) return;
+            var scene = ForestVR.SaveGame.BeginLoad();
+            if (scene == null) { Debug.LogWarning("No hay una partida guardada que cargar.", this); return; }
+            StartGame(scene);
+        }
+
+        void StartGame(string scene)
+        {
+            if (!Application.CanStreamedLevelBeLoaded(scene))
+            { Debug.LogError($"La escena '{scene}' no esta en Build Settings.", this); return; }
             loading = true;
             SetGroup(mainGroup, false);
             Heartbeat(1);
-            StartCoroutine(LoadGame());
+            StartCoroutine(LoadGame(scene));
             ForestVR.GameAudio.Music(null, 1.5f);
         }
 
-        IEnumerator LoadGame()
+        IEnumerator LoadGame(string scene)
         {
-            var load = SceneManager.LoadSceneAsync(gameScene);
+            var load = SceneManager.LoadSceneAsync(scene);
             load.allowSceneActivation = false;
             yield return Fade(0, 1, 1.6f);
             load.allowSceneActivation = true;
@@ -389,6 +511,15 @@ namespace JuegoAAA.UI
                     pixels[y * size + x] = new Color(1, 1, 1, a);
                 }
             texture.SetPixels32(pixels); texture.Apply(false, true);
+            return texture;
+        }
+
+        // Solid on the left, fading out to the right: the shade behind the menu column and the thin dividers.
+        static Texture2D SideGradientTexture()
+        {
+            var texture = new Texture2D(64, 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            for (int x = 0; x < 64; x++) texture.SetPixel(x, 0, new Color(1, 1, 1, Mathf.SmoothStep(1, 0, x / 63f)));
+            texture.Apply(false, true);
             return texture;
         }
 
