@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df4759b936ddcbb49a59498d25132c48, type: 3}
+  m_Name: ForestZombieSettings
+  m_EditorClassIdentifier: Assembly-CSharp::ForestVR.GoblinSettings
+  health: 200
+  damage: 20
+  speed: 1.1
+  detectionRadius: 12
+  wakeRadius: 7
+  visionAngle: 105
+  memorySeconds: 6
+  turnSpeed: 150
+  restAfterSeconds: 15
+  attackRange: 1.6
+  attackCooldown: 2.2
+  attackImpactDelay: 0.6
+  slowAttackImpactDelay: 1.2
+  slowAttackDamage: 35
+  respawnSeconds: 300
+  maxAlive: 3
+  zoneRadius: 500
+  mapPopulation: 0
+  populationSpacing: 15
+  populationMinPlayerDistance: 25
+  corpseSeconds: 10
+  idle: {fileID: -203655887218126122, guid: 0115e620350a1ae4d901f81068a4d725, type: 3}
+  walk: {fileID: -203655887218126122, guid: 0b23b06f30dd6de45a40e5daa4b9d5b7, type: 3}
+  attack: {fileID: -203655887218126122, guid: 880b8c10afb85d045bc3e2f9a99b322b, type: 3}
+  death: {fileID: -203655887218126122, guid: aca49fa631044864581c8a9b6716c1b7, type: 3}
+  sleep: {fileID: 0}
+  relaxing: {fileID: 0}
+  gettingUp: {fileID: -203655887218126122, guid: b8ec909ce7b1d5e4a8a0250c44230739, type: 3}
+  slowAttack: {fileID: -203655887218126122, guid: 37353435d1b0e2245af5dd987dc93d0d, type: 3}
+  attackedFromBack: {fileID: 0}
+  run: {fileID: -203655887218126122, guid: f8a977929b7d9bc43a7007c0fd4515fb, type: 3}
+  runSpeed: 2.6
+  runDistance: 5
+  woundedThreshold: 0.5
+  woundedWalk: {fileID: -203655887218126122, guid: 4f6a4e1210565e246bf6c93d43eec0c3, type: 3}
+  woundedRun: {fileID: -203655887218126122, guid: 2c7565118c118424ea59eb03e6fed3bf, type: 3}
+  woundedSpeed: 0.7
+  woundedRunSpeed: 1.4
+  lockHipsInPlace: 1
+  displayName: Zombie
+  healthBarColor: {r: 0.16, g: 0.85, b: 0.25, a: 1}
+  nameplateScale: 1
+  sleepLoop: {fileID: 0}
+  sleepVolume: 0.5
+  alertSound: {fileID: 8300000, guid: 1710d57cc7936f845b672e5d559f11b5, type: 3}
+  chaseSounds:
+  - {fileID: 8300000, guid: 1710d57cc7936f845b672e5d559f11b5, type: 3}
+  chaseSoundInterval: {x: 5, y: 10}
+  attackSound: {fileID: 8300000, guid: 1710d57cc7936f845b672e5d559f11b5, type: 3}
+  attackSoundChance: 0.7
+  hitPlayerSound: {fileID: 0}
+  hitPlayerSoundChance: 0.5
+  deathSound: {fileID: 8300000, guid: 1710d57cc7936f845b672e5d559f11b5, type: 3}
+  deathPitch: 0.7
+  voiceVolume: 1
+  voicePitch: {x: 0.8, y: 1}
+  hearingDistance: 25
